@@ -5,13 +5,13 @@ import XCTest
 final class WheelRegistryTests: XCTestCase {
 
     func testT150BootAndFirmwarePresent() {
-        let boot = DeviceMatch.entry(forVID: 0x044F, pid: 0xB677)
-        let fw   = DeviceMatch.entry(forVID: 0x044F, pid: 0xB65D)
+        let boot = DeviceMatch.entry(forVID: 0x044F, pid: 0xB65D)
+        let fw   = DeviceMatch.entry(forVID: 0x044F, pid: 0xB677)
         XCTAssertNotNil(boot)
         XCTAssertNotNil(fw)
         XCTAssertEqual(boot?.mode, .boot)
         XCTAssertEqual(fw?.mode,   .firmware)
-        XCTAssertEqual(fw?.bootIdentity?.productID, 0xB677)
+        XCTAssertEqual(fw?.bootIdentity?.productID, 0xB65D)
     }
 
     func testLogitechG29Present() {

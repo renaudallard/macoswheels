@@ -25,46 +25,74 @@ public enum DeviceMatch {
     public static let entries: [DeviceMatchEntry] = [
 
         DeviceMatchEntry(
-            identity:     WheelIdentity(vendorID: thrustmasterVID, productID: 0xB677,
-                                        model: "Thrustmaster T150 (boot)", role: .wheelBase),
+            identity:     WheelIdentity(vendorID: thrustmasterVID, productID: 0xB65D,
+                                        model: "Thrustmaster FFB Wheel (T-series boot)", role: .wheelBase),
             bootIdentity: nil,
             mode:         .boot,
-            driverName:   "T150Boot"
+            driverName:   "TBootShim"
         ),
         DeviceMatchEntry(
-            identity:     WheelIdentity(vendorID: thrustmasterVID, productID: 0xB65D,
+            identity:     WheelIdentity(vendorID: thrustmasterVID, productID: 0xB677,
                                         model: "Thrustmaster T150", role: .wheelBase),
-            bootIdentity: WheelIdentity(vendorID: thrustmasterVID, productID: 0xB677,
-                                        model: "Thrustmaster T150 (boot)", role: .wheelBase),
+            bootIdentity: WheelIdentity(vendorID: thrustmasterVID, productID: 0xB65D,
+                                        model: "Thrustmaster FFB Wheel (T-series boot)", role: .wheelBase),
             mode:         .firmware,
             driverName:   "T150"
         ),
 
         DeviceMatchEntry(
             identity:     WheelIdentity(vendorID: thrustmasterVID, productID: 0xB66E,
-                                        model: "Thrustmaster T300 RS", role: .wheelBase),
-            bootIdentity: nil,
+                                        model: "Thrustmaster T300 RS (PS3 normal)", role: .wheelBase),
+            bootIdentity: WheelIdentity(vendorID: thrustmasterVID, productID: 0xB65D,
+                                        model: "Thrustmaster FFB Wheel (T-series boot)", role: .wheelBase),
             mode:         .firmware,
             driverName:   "T300"
         ),
         DeviceMatchEntry(
-            identity:     WheelIdentity(vendorID: thrustmasterVID, productID: 0xB664,
+            identity:     WheelIdentity(vendorID: thrustmasterVID, productID: 0xB66F,
+                                        model: "Thrustmaster T300 RS (PS3 advanced)", role: .wheelBase),
+            bootIdentity: WheelIdentity(vendorID: thrustmasterVID, productID: 0xB65D,
+                                        model: "Thrustmaster FFB Wheel (T-series boot)", role: .wheelBase),
+            mode:         .firmware,
+            driverName:   "T300"
+        ),
+        DeviceMatchEntry(
+            identity:     WheelIdentity(vendorID: thrustmasterVID, productID: 0xB66D,
+                                        model: "Thrustmaster T300 RS (PS4 normal)", role: .wheelBase),
+            bootIdentity: WheelIdentity(vendorID: thrustmasterVID, productID: 0xB65D,
+                                        model: "Thrustmaster FFB Wheel (T-series boot)", role: .wheelBase),
+            mode:         .firmware,
+            driverName:   "T300"
+        ),
+        DeviceMatchEntry(
+            identity:     WheelIdentity(vendorID: thrustmasterVID, productID: 0xB669,
                                         model: "Thrustmaster TX", role: .wheelBase),
-            bootIdentity: nil,
+            bootIdentity: WheelIdentity(vendorID: thrustmasterVID, productID: 0xB65D,
+                                        model: "Thrustmaster FFB Wheel (T-series boot)", role: .wheelBase),
             mode:         .firmware,
             driverName:   "TX"
         ),
         DeviceMatchEntry(
-            identity:     WheelIdentity(vendorID: thrustmasterVID, productID: 0xB66F,
+            identity:     WheelIdentity(vendorID: thrustmasterVID, productID: 0xB692,
                                         model: "Thrustmaster TS-XW", role: .wheelBase),
-            bootIdentity: nil,
+            bootIdentity: WheelIdentity(vendorID: thrustmasterVID, productID: 0xB65D,
+                                        model: "Thrustmaster FFB Wheel (T-series boot)", role: .wheelBase),
             mode:         .firmware,
             driverName:   "TSXW"
         ),
         DeviceMatchEntry(
+            identity:     WheelIdentity(vendorID: thrustmasterVID, productID: 0xB689,
+                                        model: "Thrustmaster TS-PC Racer", role: .wheelBase),
+            bootIdentity: WheelIdentity(vendorID: thrustmasterVID, productID: 0xB65D,
+                                        model: "Thrustmaster FFB Wheel (T-series boot)", role: .wheelBase),
+            mode:         .firmware,
+            driverName:   "TSPC"
+        ),
+        DeviceMatchEntry(
             identity:     WheelIdentity(vendorID: thrustmasterVID, productID: 0xB696,
                                         model: "Thrustmaster T248", role: .wheelBase),
-            bootIdentity: nil,
+            bootIdentity: WheelIdentity(vendorID: thrustmasterVID, productID: 0xB65D,
+                                        model: "Thrustmaster FFB Wheel (T-series boot)", role: .wheelBase),
             mode:         .firmware,
             driverName:   "T248"
         ),
@@ -76,9 +104,10 @@ public enum DeviceMatch {
             driverName:   "T128"
         ),
         DeviceMatchEntry(
-            identity:     WheelIdentity(vendorID: thrustmasterVID, productID: 0xB66D,
+            identity:     WheelIdentity(vendorID: thrustmasterVID, productID: 0xB68E,
                                         model: "Thrustmaster T-GT", role: .wheelBase),
-            bootIdentity: nil,
+            bootIdentity: WheelIdentity(vendorID: thrustmasterVID, productID: 0xB65D,
+                                        model: "Thrustmaster FFB Wheel (T-series boot)", role: .wheelBase),
             mode:         .firmware,
             driverName:   "TGT"
         ),

@@ -45,10 +45,10 @@ final class T150DriverTests: XCTestCase {
 
     func testSupportedIDsHasT150Firmware() {
         let ids = T150Driver.supportedIDs.map { ($0.vendorID, $0.productID) }
-        XCTAssertTrue(ids.contains(where: { $0 == (0x044F, 0xB65D) }))
+        XCTAssertTrue(ids.contains(where: { $0 == (0x044F, 0xB677) }))
     }
 
-    func testBootIdentityMatchesT150Boot() {
-        XCTAssertEqual(T150Driver.bootIdentity?.productID, 0xB677)
+    func testBootIdentityMatchesGenericTSeriesBoot() {
+        XCTAssertEqual(T150Driver.bootIdentity?.productID, 0xB65D)
     }
 }
