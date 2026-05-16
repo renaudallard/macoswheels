@@ -52,55 +52,61 @@ public enum LGFFBEncoder {
     }
 
     public static func spring(hardwareSlot slot: UInt8, params p: ConditionParams) -> USBPacket {
-        let d1raw = (UInt32(bitPattern: Int32(p.deadBand)) &+ 0x8000) & 0xFFFF
-        let d2raw = (UInt32(bitPattern: Int32(p.centerOffset)) &+ 0x8000) & 0xFFFF
-        var d1 = scaleValueU16(UInt16(d1raw & 0xFFFF), bits: 11)
-        var d2 = scaleValueU16(UInt16(d2raw & 0xFFFF), bits: 11)
+        let d1raw: UInt32 = (UInt32(bitPattern: Int32(p.deadBand)) &+ 0x8000) & 0xFFFF
+        let d2raw: UInt32 = (UInt32(bitPattern: Int32(p.centerOffset)) &+ 0x8000) & 0xFFFF
+        var d1: UInt16 = scaleValueU16(UInt16(d1raw & 0xFFFF), bits: 11)
+        var d2: UInt16 = scaleValueU16(UInt16(d2raw & 0xFFFF), bits: 11)
         let s1: UInt8 = (p.negativeCoefficient < 0) ? 1 : 0
         let s2: UInt8 = (p.positiveCoefficient < 0) ? 1 : 0
-        var k1 = Int(abs(Int(p.negativeCoefficient)))
-        var k2 = Int(abs(Int(p.positiveCoefficient)))
-        if k1 < 2048 { d1 = 0 }       else { k1 -= 2048 }
-        if k2 < 2048 { d2 = 2047 }    else { k2 -= 2048 }
-        let bytes: [UInt8] = [
-            (0x10 << slot) | CommandOp.download.rawValue,
-            EffectByte.spring.rawValue,
-            UInt8(d1 >> 3),
-            UInt8(d2 >> 3),
-            UInt8((scaleCoeff(k2, bits: 4) << 4) | scaleCoeff(k1, bits: 4)),
-            UInt8(((d2 & 7) << 5) | ((d1 & 7) << 1) | (UInt16(s2) << 4) | UInt16(s1)),
-            scaleValueU16(UInt16(min(Int(p.positiveSaturation) + 0x8000, 0xFFFF)), bits: 8).toU8(),
-        ]
+        var k1: Int = abs(Int(p.negativeCoefficient))
+        var k2: Int = abs(Int(p.positiveCoefficient))
+        if k1 < 2048 { d1 = 0 }    else { k1 -= 2048 }
+        if k2 < 2048 { d2 = 2047 } else { k2 -= 2048 }
+
+        let head: UInt8 = (0x10 << slot) | CommandOp.download.rawValue
+        let type: UInt8 = EffectByte.spring.rawValue
+        let d1Hi: UInt8 = UInt8(d1 >> 3)
+        let d2Hi: UInt8 = UInt8(d2 >> 3)
+
+        let k1Scaled: UInt16 = scaleCoeff(k1, bits: 4)
+        let k2Scaled: UInt16 = scaleCoeff(k2, bits: 4)
+        let coeffByte: UInt8 = UInt8(((k2Scaled & 0x0F) << 4) | (k1Scaled & 0x0F))
+
+        let d1Low: UInt8 = UInt8(d1 & 7)
+        let d2Low: UInt8 = UInt8(d2 & 7)
+        let bandByte: UInt8 = (d2Low << 5) | (d1Low << 1) | (s2 << 4) | s1
+
+        let satClamped: Int = min(Int(p.positiveSaturation) + 0x8000, 0xFFFF)
+        let satByte: UInt8 = UInt8(scaleValueU16(UInt16(satClamped), bits: 8) & 0xFF)
+
+        let bytes: [UInt8] = [head, type, d1Hi, d2Hi, coeffByte, bandByte, satByte]
         return .interruptOut(endpoint: LGOpcode.interruptOutEndpoint, bytes: bytes)
     }
 
     public static func damper(hardwareSlot slot: UInt8, params p: ConditionParams) -> USBPacket {
         let s1: UInt8 = (p.negativeCoefficient < 0) ? 1 : 0
         let s2: UInt8 = (p.positiveCoefficient < 0) ? 1 : 0
-        let bytes: [UInt8] = [
-            (0x10 << slot) | CommandOp.download.rawValue,
-            EffectByte.damper.rawValue,
-            UInt8(scaleCoeff(Int(abs(Int(p.negativeCoefficient))), bits: 4)),
-            s1,
-            UInt8(scaleCoeff(Int(abs(Int(p.positiveCoefficient))), bits: 4)),
-            s2,
-            scaleValueU16(UInt16(min(Int(p.positiveSaturation) + 0x8000, 0xFFFF)), bits: 8).toU8(),
-        ]
+        let head: UInt8 = (0x10 << slot) | CommandOp.download.rawValue
+        let type: UInt8 = EffectByte.damper.rawValue
+        let k1: UInt8 = UInt8(scaleCoeff(abs(Int(p.negativeCoefficient)), bits: 4) & 0xFF)
+        let k2: UInt8 = UInt8(scaleCoeff(abs(Int(p.positiveCoefficient)), bits: 4) & 0xFF)
+        let satClamped: Int = min(Int(p.positiveSaturation) + 0x8000, 0xFFFF)
+        let satByte: UInt8 = UInt8(scaleValueU16(UInt16(satClamped), bits: 8) & 0xFF)
+        let bytes: [UInt8] = [head, type, k1, s1, k2, s2, satByte]
         return .interruptOut(endpoint: LGOpcode.interruptOutEndpoint, bytes: bytes)
     }
 
     public static func friction(hardwareSlot slot: UInt8, params p: ConditionParams) -> USBPacket {
         let s1: UInt8 = (p.negativeCoefficient < 0) ? 1 : 0
         let s2: UInt8 = (p.positiveCoefficient < 0) ? 1 : 0
-        let bytes: [UInt8] = [
-            (0x10 << slot) | CommandOp.download.rawValue,
-            EffectByte.friction.rawValue,
-            UInt8(scaleCoeff(Int(abs(Int(p.negativeCoefficient))), bits: 8)),
-            UInt8(scaleCoeff(Int(abs(Int(p.positiveCoefficient))), bits: 8)),
-            scaleValueU16(UInt16(min(Int(p.positiveSaturation) + 0x8000, 0xFFFF)), bits: 8).toU8(),
-            (s2 << 4) | s1,
-            0,
-        ]
+        let head: UInt8 = (0x10 << slot) | CommandOp.download.rawValue
+        let type: UInt8 = EffectByte.friction.rawValue
+        let k1: UInt8 = UInt8(scaleCoeff(abs(Int(p.negativeCoefficient)), bits: 8) & 0xFF)
+        let k2: UInt8 = UInt8(scaleCoeff(abs(Int(p.positiveCoefficient)), bits: 8) & 0xFF)
+        let satClamped: Int = min(Int(p.positiveSaturation) + 0x8000, 0xFFFF)
+        let satByte: UInt8 = UInt8(scaleValueU16(UInt16(satClamped), bits: 8) & 0xFF)
+        let signByte: UInt8 = (s2 << 4) | s1
+        let bytes: [UInt8] = [head, type, k1, k2, satByte, signByte, 0]
         return .interruptOut(endpoint: LGOpcode.interruptOutEndpoint, bytes: bytes)
     }
 
