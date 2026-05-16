@@ -63,13 +63,14 @@ final class T300DriverTests: XCTestCase {
         XCTAssertThrowsError(try d.setRotationRange(degrees: 1200))
     }
 
-    func testEncodeStillThrowsNotImplemented() {
+    func testEncodeConstantNowReturnsAPacket() throws {
         let t = MockUSBTransport()
         let d = T300Driver(transport: t, delegate: NoopDelegate())
-        XCTAssertThrowsError(try d.encode(
-            .constant(slot: 0, magnitude: 0, duration: 0, direction: 0, envelope: nil))) { err in
-            guard case DriverError.notImplemented = err else { return XCTFail() }
-        }
+        let pkts = try d.encode(
+            .constant(slot: 0, magnitude: 0x4000, duration: 0, direction: 0, envelope: nil))
+        XCTAssertEqual(pkts.count, 1)
+        guard case .interruptOut(_, let bytes) = pkts[0] else { return XCTFail() }
+        XCTAssertEqual(bytes[2], 0x6A)
     }
 }
 

@@ -90,14 +90,16 @@ public final class T300Driver: DeviceDriver, @unchecked Sendable {
     }
 
     public func encode(_ effect: NormalizedEffect) throws -> [USBPacket] {
-        throw DriverError.notImplemented
+        try T300FFBEncoder.encode(effect)
     }
 
     public func stopEffect(slot: UInt8) throws {
-        throw DriverError.notImplemented
+        try transport.send(T300FFBEncoder.stopPacket(slot: slot))
     }
 
     public func stopAllEffects() throws {
-        throw DriverError.notImplemented
+        for slot: UInt8 in 0..<16 {
+            try? transport.send(T300FFBEncoder.stopPacket(slot: slot))
+        }
     }
 }
