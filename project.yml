@@ -49,6 +49,11 @@ targets:
     platform: macOS
     sources:
       - path: Sources/Container
+        excludes:
+          - "Resources/**"
+      - path: Sources/Container/Resources
+        type: folder
+        buildPhase: resources
     dependencies:
       - target: MacoswheelsDEXT
         embed: true

@@ -4,9 +4,12 @@ macOS 26+ driver for Thrustmaster T-series and Logitech G-series racing wheels.
 Brings force feedback, rotation-range control and autocenter spring to native
 macOS games and to CrossOver / Wine titles.
 
-> **Status:** Phase 0 scaffolding. The Linux-buildable Swift libraries, CLI,
-> tests, and CI workflow are in place. The DriverKit System Extension is a
-> bundle skeleton; no real USB traffic is emitted yet.
+> **Status:** Phases 0-7 of the implementation roadmap have landed. Every
+> supported wheel and shifter has a `DeviceDriver` conformance with verified
+> protocol bytes for settings (rotation range, autocenter, gain). The
+> `T150Driver` is the first complete FFB encoder; other wheels currently throw
+> `notImplemented` for effect uploads and will fill in as USB captures from
+> real hardware confirm their wire formats. 84 unit tests pass on Debian arm64.
 
 ## What it does
 
@@ -25,29 +28,38 @@ dev-signed DriverKit System Extension (DEXT) plus a CLI that:
 
 ## Supported devices
 
-Wheel bases:
+Wheel bases (firmware-mode PIDs; all Thrustmasters share boot PID `044F:B65D`,
+many Logitechs share compat PID `046D:C294`):
 
-| Vendor       | Model         | USB ID         |
-|--------------|---------------|----------------|
-| Thrustmaster | T150          | 044F:B65D      |
-| Thrustmaster | T300 RS       | 044F:B66E      |
-| Thrustmaster | TX            | 044F:B664      |
-| Thrustmaster | TS-XW         | 044F:B66F      |
-| Thrustmaster | T248          | 044F:B696      |
-| Thrustmaster | T128          | 044F:B68F      |
-| Thrustmaster | T-GT          | 044F:B66D      |
-| Logitech     | G25           | 046D:C299      |
-| Logitech     | G27           | 046D:C29B      |
-| Logitech     | G29           | 046D:C24F      |
-| Logitech     | G920          | 046D:C262      |
-| Logitech     | G923          | 046D:C266      |
+| Vendor       | Model                          | USB ID    | FFB encoder       |
+|--------------|--------------------------------|-----------|-------------------|
+| Thrustmaster | T150                           | 044F:B677 | full (constant, periodic, spring, damper) |
+| Thrustmaster | T300 RS (PS3 normal / adv / PS4)| 044F:B66E / B66F / B66D | settings only |
+| Thrustmaster | TX                             | 044F:B669 | settings only     |
+| Thrustmaster | TS-XW                          | 044F:B692 | settings only     |
+| Thrustmaster | TS-PC Racer                    | 044F:B689 | settings only     |
+| Thrustmaster | T248                           | 044F:B696 | settings only     |
+| Thrustmaster | T128                           | 044F:B68F | stub              |
+| Thrustmaster | T-GT                           | 044F:B68E | settings only     |
+| Logitech     | Driving Force Pro              | 046D:C298 | settings only     |
+| Logitech     | G25                            | 046D:C299 | settings only     |
+| Logitech     | Driving Force GT               | 046D:C29A | settings only     |
+| Logitech     | G27                            | 046D:C29B | settings only     |
+| Logitech     | G29                            | 046D:C24F | settings only     |
+| Logitech     | G920                           | 046D:C262 | settings only     |
+| Logitech     | G923 (PC / PlayStation / Xbox) | 046D:C266 / C267 / C26E | settings only |
 
 Peripherals:
 
-| Vendor       | Model                       | USB ID    |
-|--------------|-----------------------------|-----------|
-| Thrustmaster | TH8A shifter                | 044F:B687 |
-| Logitech     | G-series shifter            | 046D:C29C |
+| Vendor       | Model                            | USB ID    |
+|--------------|----------------------------------|-----------|
+| Thrustmaster | TH8A shifter                     | 044F:B687 |
+| Logitech     | Driving Force shifter (G29/G920) | 046D:C29C |
+
+"Settings only" means rotation range, autocenter strength, and (where the wheel
+supports it) global gain are encoded with verified bytes; FFB effect upload
+still throws `notImplemented`. T150 is the reference implementation for the
+full pipeline.
 
 The T150 is the first wheel to ship with full FFB. Other wheels are stubs
 gated behind their own personality entries and will be filled in per the
