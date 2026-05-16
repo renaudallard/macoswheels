@@ -82,8 +82,16 @@ public final class G29Driver: DeviceDriver, @unchecked Sendable {
     }
 
     public func encode(_ effect: NormalizedEffect) throws -> [USBPacket] {
-        throw DriverError.notImplemented
+        try LGFFBEncoder.encode(effect)
     }
-    public func stopEffect(slot: UInt8) throws { throw DriverError.notImplemented }
-    public func stopAllEffects() throws         { throw DriverError.notImplemented }
+
+    public func stopEffect(slot: UInt8) throws {
+        try transport.send(LGFFBEncoder.stopPacket(hardwareSlot: LGFFBEncoder.pidSlotToHardware(slot)))
+    }
+
+    public func stopAllEffects() throws {
+        for slot: UInt8 in 0..<4 {
+            try? transport.send(LGFFBEncoder.stopPacket(hardwareSlot: slot))
+        }
+    }
 }

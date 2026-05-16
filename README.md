@@ -41,13 +41,13 @@ many Logitechs share compat PID `046D:C294`):
 | Thrustmaster | T248                           | 044F:B696 | settings only     |
 | Thrustmaster | T128                           | 044F:B68F | stub              |
 | Thrustmaster | T-GT                           | 044F:B68E | settings only     |
-| Logitech     | Driving Force Pro              | 046D:C298 | settings only     |
-| Logitech     | G25                            | 046D:C299 | settings only     |
+| Logitech     | Driving Force Pro              | 046D:C298 | settings + condition FFB |
+| Logitech     | G25                            | 046D:C299 | settings + condition FFB |
 | Logitech     | Driving Force GT               | 046D:C29A | settings only     |
-| Logitech     | G27                            | 046D:C29B | settings only     |
-| Logitech     | G29                            | 046D:C24F | settings only     |
-| Logitech     | G920                           | 046D:C262 | settings only     |
-| Logitech     | G923 (PC / PlayStation / Xbox) | 046D:C266 / C267 / C26E | settings only |
+| Logitech     | G27                            | 046D:C29B | settings + condition FFB |
+| Logitech     | G29                            | 046D:C24F | settings + condition FFB |
+| Logitech     | G920                           | 046D:C262 | settings + condition FFB |
+| Logitech     | G923 (PC / PlayStation / Xbox) | 046D:C266 / C267 / C26E | settings + condition FFB |
 
 Peripherals:
 
@@ -58,8 +58,12 @@ Peripherals:
 
 "Settings only" means rotation range, autocenter strength, and (where the wheel
 supports it) global gain are encoded with verified bytes; FFB effect upload
-still throws `notImplemented`. T150 is the reference implementation for the
-full pipeline.
+still throws `notImplemented`.
+
+"Condition FFB" means constant, spring, damper, and friction effects are
+encoded with bytes verified against `new-lg4ff`'s `lg4ff_update_slot`.
+Periodic effects on Logitech wheels need the continuous-update loop and are
+still pending. T150 has the full pipeline including periodics.
 
 The T150 is the first wheel to ship with full FFB. Other wheels are stubs
 gated behind their own personality entries and will be filled in per the
