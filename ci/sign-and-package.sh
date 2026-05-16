@@ -3,12 +3,17 @@ set -euo pipefail
 
 SCHEME="${1:-MacoswheelsContainer}"
 CONFIG="${2:-Release}"
-SHA="${GITHUB_SHA:-$(git rev-parse --short HEAD 2>/dev/null || echo dev)}"
+
+if [ -n "${GITHUB_REF_NAME:-}" ] && [[ "${GITHUB_REF_TYPE:-}" = "tag" ]]; then
+    LABEL="$GITHUB_REF_NAME"
+else
+    LABEL="${GITHUB_SHA:-$(git rev-parse --short HEAD 2>/dev/null || echo dev)}"
+fi
 
 BUILD_DIR="build"
 ARCHIVE="$BUILD_DIR/Macoswheels.xcarchive"
 ARTIFACT_DIR="$BUILD_DIR/artifact"
-ZIP="$BUILD_DIR/macoswheels-${SHA}.zip"
+ZIP="$BUILD_DIR/macoswheels-${LABEL}.zip"
 
 mkdir -p "$BUILD_DIR"
 xcodebuild -project Macoswheels.xcodeproj \

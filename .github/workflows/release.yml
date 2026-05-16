@@ -1,0 +1,98 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v0.2.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  linux-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.0"
+      - run: swift test
+
+  mac-build:
+    runs-on: macos-latest
+    needs: linux-tests
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      - name: Select latest Xcode
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)"
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Import signing cert
+        if: ${{ secrets.CERT_P12_BASE64 != '' }}
+        env:
+          CERT_P12_BASE64: ${{ secrets.CERT_P12_BASE64 }}
+          CERT_P12_PWD: ${{ secrets.CERT_P12_PWD }}
+        run: bash ci/import-cert.sh
+
+      - name: Build container + DEXT + CLI
+        env:
+          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
+        run: |
+          xcodebuild -project Macoswheels.xcodeproj \
+                     -scheme MacoswheelsContainer \
+                     -configuration Release \
+                     -destination 'platform=macOS' \
+                     build
+
+      - name: Package artifact
+        run: bash ci/sign-and-package.sh MacoswheelsContainer Release
+
+      - name: Locate artifact
+        id: locate
+        run: |
+          ZIP="$(ls build/macoswheels-*.zip | head -1)"
+          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$ZIP")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload CI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.locate.outputs.name }}
+          path: ${{ steps.locate.outputs.zip }}
+          if-no-files-found: error
+
+      - name: Create or update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: ${{ github.event.inputs.tag || github.ref_name }}
+          files: ${{ steps.locate.outputs.zip }}
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            macoswheels build for ${{ github.event.inputs.tag || github.ref_name }}, built on `macos-latest` with the Xcode that runner ships with.
+
+            ## Install (dev-mode Mac required)
+            1. Download `${{ steps.locate.outputs.name }}` and unzip.
+            2. Run `Tools/dev-load.sh` from the unzipped directory.
+            3. Approve the system extension in **System Settings > Privacy & Security**.
+
+            See `docs/DEV-MODE-SETUP.md` for the one-time `csrutil` and `systemextensionsctl developer on` setup.
