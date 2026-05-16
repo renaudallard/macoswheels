@@ -34,13 +34,13 @@ many Logitechs share compat PID `046D:C294`):
 | Vendor       | Model                          | USB ID    | FFB encoder       |
 |--------------|--------------------------------|-----------|-------------------|
 | Thrustmaster | T150                           | 044F:B677 | full (constant, periodic, spring, damper) |
-| Thrustmaster | T300 RS (PS3 normal / adv / PS4)| 044F:B66E / B66F / B66D | constant + condition FFB |
-| Thrustmaster | TX                             | 044F:B669 | constant + condition FFB |
-| Thrustmaster | TS-XW                          | 044F:B692 | constant + condition FFB |
-| Thrustmaster | TS-PC Racer                    | 044F:B689 | constant + condition FFB |
-| Thrustmaster | T248                           | 044F:B696 | constant + condition FFB |
+| Thrustmaster | T300 RS (PS3 normal / adv / PS4)| 044F:B66E / B66F / B66D | full FFB    |
+| Thrustmaster | TX                             | 044F:B669 | full FFB          |
+| Thrustmaster | TS-XW                          | 044F:B692 | full FFB          |
+| Thrustmaster | TS-PC Racer                    | 044F:B689 | full FFB          |
+| Thrustmaster | T248                           | 044F:B696 | full FFB          |
 | Thrustmaster | T128                           | 044F:B68F | stub              |
-| Thrustmaster | T-GT                           | 044F:B68E | constant + condition FFB |
+| Thrustmaster | T-GT                           | 044F:B68E | full FFB          |
 | Logitech     | Driving Force Pro              | 046D:C298 | settings + condition FFB |
 | Logitech     | G25                            | 046D:C299 | settings + condition FFB |
 | Logitech     | Driving Force GT               | 046D:C29A | settings only     |
@@ -60,12 +60,14 @@ Peripherals:
 supports it) global gain are encoded with verified bytes; FFB effect upload
 still throws `notImplemented`.
 
-"Condition FFB" means constant, spring, damper, friction, and (for T300
-family) inertia effects are encoded with bytes verified against the
-upstream Linux drivers — `new-lg4ff`'s `lg4ff_update_slot` for the
-Logitechs, `hid-tmff2`'s `t300rs_upload_*` for the T300 family. Periodic
-and ramp effects on those wheels still pend their respective continuous-
-update loops. T150 has the full pipeline including periodics.
+"Full FFB" means every effect supported by the wheel's hardware (constant,
+ramp, all five periodic waveforms, spring, damper, friction, inertia) is
+encoded with bytes verified against `hid-tmff2`'s `t300rs_upload_*`.
+
+"Condition FFB" on the Logitechs means constant, spring, damper, and
+friction effects are byte-correct per `new-lg4ff`'s `lg4ff_update_slot`.
+Periodic and ramp on Logitech still need the continuous-update timer
+loop and are pending.
 
 The T150 is the first wheel to ship with full FFB. Other wheels are stubs
 gated behind their own personality entries and will be filled in per the

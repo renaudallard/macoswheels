@@ -5,6 +5,7 @@ public enum T300FFBEncoder {
     public static let opcodeConstant:  UInt8 = 0x6A
     public static let opcodeCondition: UInt8 = 0x64
     public static let opcodePeriodic:  UInt8 = 0x6B
+    public static let opcodeRamp:      UInt8 = 0x6B
     public static let opcodePlay:      UInt8 = 0x89
     public static let codePlay:        UInt8 = 0x41
 
@@ -45,7 +46,13 @@ public enum T300FFBEncoder {
                                    params: params,
                                    duration: duration,
                                    envelope: env)]
-        case .ramp, .customForceData:
+        case .ramp(let slot, let start, let end, let duration, let env):
+            return [rampUpload(slot: slot,
+                               start: start,
+                               end: end,
+                               duration: duration,
+                               envelope: env)]
+        case .customForceData:
             throw DriverError.notImplemented
         }
     }
@@ -111,6 +118,29 @@ public enum T300FFBEncoder {
         bytes += le16(kind.maxSaturation)
         bytes += [kind.typeByte]
         bytes += timingBytes(durationMs: 0xFFFF, offsetMs: 0)
+        return .interruptOut(endpoint: TMOpcode.interruptOutEndpoint, bytes: bytes)
+    }
+
+    private static func rampUpload(slot: UInt8,
+                                   start: Int16,
+                                   end: Int16,
+                                   duration: UInt32,
+                                   envelope: Envelope?) -> USBPacket
+    {
+        let slope = UInt16(abs(Int(start) - Int(end)) / 2)
+        let center = Int16(truncatingIfNeeded: (Int(start) + Int(end)) / 2)
+        let invert: UInt8 = (start < end) ? 0x04 : 0x05
+        let dur = duration == 0 ? UInt16(0xFFFF) : UInt16(min(duration, UInt32(UInt16.max - 1)))
+
+        var bytes: [UInt8] = [0x00, slot &+ 1, opcodeRamp]
+        bytes += le16(slope)
+        bytes += le16(UInt16(bitPattern: center))
+        bytes += [0x00, 0x00]
+        bytes += le16(dur)
+        bytes += le16(0x8000)
+        bytes += envelopeBytes(envelope)
+        bytes += [invert]
+        bytes += timingBytes(durationMs: dur, offsetMs: 0)
         return .interruptOut(endpoint: TMOpcode.interruptOutEndpoint, bytes: bytes)
     }
 

@@ -62,9 +62,21 @@ final class T300FFBEncoderTests: XCTestCase {
                                     deadBand: 0, centerOffset: 0))))
     }
 
-    func testRampStillThrowsNotImplemented() {
-        XCTAssertThrowsError(try T300FFBEncoder.encode(
-            .ramp(slot: 0, start: 0, end: 100, duration: 1000, envelope: nil)))
+    func testRampEncodesAsOpcode6BWithInvert0x04ForRisingRamp() throws {
+        let pkts = try T300FFBEncoder.encode(
+            .ramp(slot: 0, start: 0, end: 0x4000, duration: 1000, envelope: nil))
+        guard case .interruptOut(_, let bytes) = pkts[0] else { return XCTFail() }
+        XCTAssertEqual(bytes[0], 0x00)
+        XCTAssertEqual(bytes[1], 0x01)
+        XCTAssertEqual(bytes[2], 0x6B)
+        XCTAssertEqual(bytes[bytes.count - 11], 0x04)
+    }
+
+    func testRampInvertByteIs0x05ForFallingRamp() throws {
+        let pkts = try T300FFBEncoder.encode(
+            .ramp(slot: 0, start: 0x4000, end: 0, duration: 1000, envelope: nil))
+        guard case .interruptOut(_, let bytes) = pkts[0] else { return XCTFail() }
+        XCTAssertEqual(bytes[bytes.count - 11], 0x05)
     }
 
     func testSineWaveformByteIs0x03() throws {
