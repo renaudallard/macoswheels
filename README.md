@@ -86,11 +86,20 @@ If you are not comfortable with that, this project is not for you.
 
 ## Install (end-user)
 
-1. Grab the latest signed artifact from the GitHub Actions
+1. Grab the latest build from the
+   [Releases page](https://github.com/renaudallard/macoswheels/releases)
+   (cut by `release.yml` on every `v*` tag, built on `macos-latest`) or from
+   the development
    [build workflow](https://github.com/renaudallard/macoswheels/actions/workflows/build.yml).
 2. Unzip the artifact.
 3. Run `Tools/dev-load.sh` from the unzip directory.
 4. Approve the system extension in System Settings > Privacy & Security.
+
+To cut a release: tag a commit with `vX.Y.Z` and push the tag. The
+`release.yml` workflow builds on `macos-latest`, signs (if the
+`CERT_P12_BASE64` / `CERT_P12_PWD` / `DEVELOPMENT_TEAM` repo secrets are
+configured), and attaches `macoswheels-vX.Y.Z.zip` to a GitHub Release of
+the same name.
 
 After activation, plug in the wheel and use `macoswheels list` to confirm it
 is recognized. Configure rotation range and autocenter:
