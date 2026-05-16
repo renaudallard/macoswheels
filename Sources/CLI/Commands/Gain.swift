@@ -6,6 +6,16 @@ enum Gain {
         guard pct <= 100 else {
             Output.die("gain: \(pct) out of bounds (0..100)", code: 2)
         }
-        print("macoswheels: would set FFB gain to \(pct)% (Phase 0 stub)")
+        do {
+            let client = try WheelClient()
+            try client.setGain(percent: pct, registryID: 0)
+            try PreferencesStore.mutate { $0.gainPercent = pct }
+            print("gain = \(pct)%")
+        } catch WheelClientError.notImplementedOnPlatform {
+            try? PreferencesStore.mutate { $0.gainPercent = pct }
+            print("gain = \(pct)% (not on macOS, plist updated only)")
+        } catch {
+            Output.die("gain: \(error)")
+        }
     }
 }

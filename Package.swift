@@ -31,6 +31,6 @@ let package = Package(
         .testTarget(name: "DescriptorTests",
                     dependencies: ["HIDDescriptors", "WheelProtocol"]),
         .testTarget(name: "CLITests",
-                    dependencies: ["CLI", "ConfigPlane"]),
+                    dependencies: ["CLI", "ConfigPlane", "WheelProtocol"]),
     ]
 )

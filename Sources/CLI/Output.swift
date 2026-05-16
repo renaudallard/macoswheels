@@ -14,6 +14,7 @@ enum Output {
           autocenter  <0..100> [<wheel>]
           gain        <0..100> [<wheel>]
           reset       [<wheel>]
+          restore                       reapply saved range/autocenter/gain
 
         flags:
           -h, --help     show this help

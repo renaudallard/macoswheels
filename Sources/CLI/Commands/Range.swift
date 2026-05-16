@@ -6,6 +6,16 @@ enum Range {
         guard (90...1080).contains(degrees) else {
             Output.die("range: \(degrees) out of bounds (90..1080)", code: 2)
         }
-        print("macoswheels: would set rotation range to \(degrees)\u{00B0} (Phase 0 stub)")
+        do {
+            let client = try WheelClient()
+            try client.setRotationRange(degrees: degrees, registryID: 0)
+            try PreferencesStore.mutate { $0.rotationRangeDegrees = degrees }
+            print("rotation range = \(degrees)\u{00B0}")
+        } catch WheelClientError.notImplementedOnPlatform {
+            try? PreferencesStore.mutate { $0.rotationRangeDegrees = degrees }
+            print("rotation range = \(degrees)\u{00B0} (not on macOS, plist updated only)")
+        } catch {
+            Output.die("range: \(error)")
+        }
     }
 }

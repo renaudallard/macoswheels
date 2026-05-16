@@ -1,6 +1,14 @@
 enum Reset {
     static func run(args: [String]) {
         let _ = args
-        print("macoswheels: would re-run initialize() on every wheel (Phase 0 stub)")
+        do {
+            let client = try WheelClient()
+            try client.reset(registryID: 0)
+            print("reset")
+        } catch WheelClientError.notImplementedOnPlatform {
+            print("reset: not on macOS")
+        } catch {
+            Output.die("reset: \(error)")
+        }
     }
 }
