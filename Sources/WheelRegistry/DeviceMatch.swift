@@ -122,31 +122,48 @@ public enum DeviceMatch {
 
         DeviceMatchEntry(
             identity:     WheelIdentity(vendorID: logitechVID, productID: 0xC294,
-                                        model: "Logitech Driving Force / G25 / G27", role: .wheelBase),
+                                        model: "Logitech Driving Force (boot/compat)", role: .wheelBase),
             bootIdentity: nil,
             mode:         .boot,
-            driverName:   "LG_DFGT_Boot"
+            driverName:   "LGBootShim"
+        ),
+        DeviceMatchEntry(
+            identity:     WheelIdentity(vendorID: logitechVID, productID: 0xC298,
+                                        model: "Logitech Driving Force Pro", role: .wheelBase),
+            bootIdentity: WheelIdentity(vendorID: logitechVID, productID: 0xC294,
+                                        model: "Logitech Driving Force (boot/compat)", role: .wheelBase),
+            mode:         .firmware,
+            driverName:   "DFP"
         ),
         DeviceMatchEntry(
             identity:     WheelIdentity(vendorID: logitechVID, productID: 0xC299,
-                                        model: "Logitech G25 (native)", role: .wheelBase),
+                                        model: "Logitech G25", role: .wheelBase),
             bootIdentity: WheelIdentity(vendorID: logitechVID, productID: 0xC294,
-                                        model: "Logitech G25 (boot)", role: .wheelBase),
+                                        model: "Logitech Driving Force (boot/compat)", role: .wheelBase),
             mode:         .firmware,
             driverName:   "G25"
         ),
         DeviceMatchEntry(
-            identity:     WheelIdentity(vendorID: logitechVID, productID: 0xC29B,
-                                        model: "Logitech G27 (native)", role: .wheelBase),
+            identity:     WheelIdentity(vendorID: logitechVID, productID: 0xC29A,
+                                        model: "Logitech Driving Force GT", role: .wheelBase),
             bootIdentity: WheelIdentity(vendorID: logitechVID, productID: 0xC294,
-                                        model: "Logitech G27 (boot)", role: .wheelBase),
+                                        model: "Logitech Driving Force (boot/compat)", role: .wheelBase),
+            mode:         .firmware,
+            driverName:   "DFGT"
+        ),
+        DeviceMatchEntry(
+            identity:     WheelIdentity(vendorID: logitechVID, productID: 0xC29B,
+                                        model: "Logitech G27", role: .wheelBase),
+            bootIdentity: WheelIdentity(vendorID: logitechVID, productID: 0xC294,
+                                        model: "Logitech Driving Force (boot/compat)", role: .wheelBase),
             mode:         .firmware,
             driverName:   "G27"
         ),
         DeviceMatchEntry(
             identity:     WheelIdentity(vendorID: logitechVID, productID: 0xC24F,
                                         model: "Logitech G29", role: .wheelBase),
-            bootIdentity: nil,
+            bootIdentity: WheelIdentity(vendorID: logitechVID, productID: 0xC294,
+                                        model: "Logitech Driving Force (boot/compat)", role: .wheelBase),
             mode:         .firmware,
             driverName:   "G29"
         ),
@@ -159,15 +176,29 @@ public enum DeviceMatch {
         ),
         DeviceMatchEntry(
             identity:     WheelIdentity(vendorID: logitechVID, productID: 0xC266,
-                                        model: "Logitech G923", role: .wheelBase),
+                                        model: "Logitech G923 (PC)", role: .wheelBase),
             bootIdentity: nil,
             mode:         .firmware,
             driverName:   "G923"
         ),
+        DeviceMatchEntry(
+            identity:     WheelIdentity(vendorID: logitechVID, productID: 0xC267,
+                                        model: "Logitech G923 (PlayStation)", role: .wheelBase),
+            bootIdentity: nil,
+            mode:         .firmware,
+            driverName:   "G923PS"
+        ),
+        DeviceMatchEntry(
+            identity:     WheelIdentity(vendorID: logitechVID, productID: 0xC26E,
+                                        model: "Logitech G923 (Xbox)", role: .wheelBase),
+            bootIdentity: nil,
+            mode:         .firmware,
+            driverName:   "G923Xbox"
+        ),
 
         DeviceMatchEntry(
             identity:     WheelIdentity(vendorID: logitechVID, productID: 0xC29C,
-                                        model: "Logitech G-series shifter", role: .shifter),
+                                        model: "Logitech Driving Force Shifter", role: .shifter),
             bootIdentity: nil,
             mode:         .firmware,
             driverName:   "GShifter"
