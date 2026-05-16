@@ -1,0 +1,56 @@
+.Dd May 17, 2026
+.Dt MACOSWHEELS 7
+.Os
+.Sh NAME
+.Nm macoswheels
+.Nd macOS driver for Thrustmaster and Logitech racing wheels
+.Sh DESCRIPTION
+.Nm
+is a DriverKit System Extension
+.Pq DEXT
+plus a userland CLI that lets Thrustmaster T-series and Logitech G-series
+racing wheels work on macOS 26 and later.
+.Pp
+The DEXT claims the wheel over USB, sends the proprietary initialization
+sequence
+.Po
+boot-mode to firmware-mode switch on Thrustmaster T-series, native-mode
+register write on Logitech G29 / G920 / G923
+.Pc
+and re-exposes the wheel as a HID device with a USB PID 1.0 force-feedback
+descriptor.
+Games that talk to
+.Xr IOHIDManager 7 ,
+including CrossOver / Wine titles, see a standard force-feedback joystick
+with no per-app configuration.
+.Sh SUPPORTED DEVICES
+.Bl -tag -width "Thrustmaster T-GT (firmware mode)"
+.It Thrustmaster T150
+VID 0x044F, boot PID 0xB677, firmware PID 0xB65D.
+.It Thrustmaster T300 RS, TX, TS-XW, T248, T128, T-GT
+T-series family.
+.It Thrustmaster TH8A shifter
+Stand-alone H-pattern / sequential shifter.
+.It Logitech G25, G27
+G-series family, behind a boot-to-native PID swap.
+.It Logitech G29, G920, G923
+G-series family, HID++ register-driven native mode.
+.It Logitech G-series shifter
+Stand-alone H-pattern shifter.
+.El
+.Sh DISTRIBUTION MODEL
+.Nm
+is dev-signed only.
+To install,
+.Xr csrutil 1
+must be relaxed and
+.Xr systemextensionsctl 1
+must have developer mode enabled.
+The project is not, and will not be, notarized; it is intended for personal
+use by sim-racers willing to manage their own SIP posture.
+.Sh SEE ALSO
+.Xr macoswheels 1 ,
+.Xr systemextensionsctl 1 ,
+.Xr csrutil 1
+.Sh AUTHORS
+.An Renaud Allard Aq Mt renaud@allard.it

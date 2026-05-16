@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleName</key>
+    <string>$(PRODUCT_NAME)</string>
+    <key>CFBundlePackageType</key>
+    <string>DEXT</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>OSBundleUsageDescription</key>
+    <string>Drives Thrustmaster T-series and Logitech G-series racing wheels.</string>
+    <key>IOKitPersonalities</key>
+    <dict>
+        <key>T150-Boot</key>
+        <dict>
+            <key>CFBundleIdentifier</key>
+            <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+            <key>CFBundleIdentifierKernel</key>
+            <string>com.apple.kpi.iokit</string>
+            <key>IOClass</key>
+            <string>IOUserService</string>
+            <key>IOUserClass</key>
+            <string>MacoswheelsDriver</string>
+            <key>IOProviderClass</key>
+            <string>IOUSBHostInterface</string>
+            <key>idVendor</key>
+            <integer>1103</integer>
+            <key>idProduct</key>
+            <integer>46711</integer>
+            <key>bInterfaceNumber</key>
+            <integer>0</integer>
+            <key>IOMatchCategory</key>
+            <string>it.allard.macoswheels.T150-Boot</string>
+            <key>IOProbeScore</key>
+            <integer>10000</integer>
+            <key>WheelMode</key>
+            <string>boot</string>
+        </dict>
+        <key>T150-Firmware</key>
+        <dict>
+            <key>CFBundleIdentifier</key>
+            <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+            <key>CFBundleIdentifierKernel</key>
+            <string>com.apple.kpi.iokit</string>
+            <key>IOClass</key>
+            <string>IOUserService</string>
+            <key>IOUserClass</key>
+            <string>MacoswheelsDriver</string>
+            <key>IOProviderClass</key>
+            <string>IOUSBHostInterface</string>
+            <key>idVendor</key>
+            <integer>1103</integer>
+            <key>idProduct</key>
+            <integer>46685</integer>
+            <key>bInterfaceNumber</key>
+            <integer>0</integer>
+            <key>IOMatchCategory</key>
+            <string>it.allard.macoswheels.T150-Firmware</string>
+            <key>IOProbeScore</key>
+            <integer>10000</integer>
+            <key>WheelMode</key>
+            <string>firmware</string>
+        </dict>
+    </dict>
+</dict>
+</plist>

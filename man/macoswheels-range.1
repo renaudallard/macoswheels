@@ -1,0 +1,26 @@
+.Dd May 17, 2026
+.Dt MACOSWHEELS-RANGE 1
+.Os
+.Sh NAME
+.Nm macoswheels-range
+.Nd set rotation range of a racing wheel
+.Sh SYNOPSIS
+.Nm macoswheels
+.Cm range
+.Ar degrees
+.Op Ar wheel
+.Sh DESCRIPTION
+Sets the physical lock-to-lock rotation range of the selected wheel,
+in degrees.
+.Pp
+The accepted range depends on the wheel.
+The Thrustmaster T150 accepts 270..1080 degrees.
+The Logitech G29 accepts 40..900 degrees.
+Out-of-bounds values are rejected with exit status 2.
+.Pp
+The new value is also written to the user preferences plist and
+reapplied at login.
+.Sh EXIT STATUS
+.Ex -std
+.Sh SEE ALSO
+.Xr macoswheels 1

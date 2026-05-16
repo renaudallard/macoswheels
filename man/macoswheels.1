@@ -1,0 +1,72 @@
+.Dd May 17, 2026
+.Dt MACOSWHEELS 1
+.Os
+.Sh NAME
+.Nm macoswheels
+.Nd configure Thrustmaster and Logitech racing wheels on macOS
+.Sh SYNOPSIS
+.Nm
+.Cm list
+.Nm
+.Cm info Op Ar wheel
+.Nm
+.Cm range Ar degrees Op Ar wheel
+.Nm
+.Cm autocenter Ar percent Op Ar wheel
+.Nm
+.Cm gain Ar percent Op Ar wheel
+.Nm
+.Cm reset Op Ar wheel
+.Sh DESCRIPTION
+The
+.Nm
+utility talks to the macoswheels DriverKit System Extension
+.Pq DEXT
+over an
+.Xr IOUserClient 7 ,
+configures Thrustmaster T-series and Logitech G-series racing wheels
+that the DEXT has claimed, and reads back wheel state.
+.Pp
+When exactly one wheel is connected the
+.Ar wheel
+argument may be omitted and is inferred.
+With multiple wheels present a model prefix or
+.Fl -id Ar registryID
+must be supplied.
+.Pp
+Settings written by
+.Nm
+are also persisted to
+.Pa ~/Library/Preferences/it.allard.macoswheels.plist
+and reapplied at login by the
+.Nm macoswheels-restore
+LaunchAgent.
+.Sh SUBCOMMANDS
+.Bl -tag -width range
+.It Cm list
+Print every wheel known to the device-match table.
+.It Cm info
+Print firmware version, current rotation range, autocenter strength and global gain for the selected wheel.
+See
+.Xr macoswheels-info 1 .
+.It Cm range Ar degrees
+Set physical lock-to-lock rotation range, clamped to the wheel's supported window.
+See
+.Xr macoswheels-range 1 .
+.It Cm autocenter Ar percent
+Set autocenter spring strength as a percentage 0..100.
+See
+.Xr macoswheels-autocenter 1 .
+.It Cm gain Ar percent
+Set global force-feedback gain as a percentage 0..100.
+.It Cm reset
+Re-run the wheel's initialize sequence.
+.El
+.Sh EXIT STATUS
+.Ex -std
+.Sh SEE ALSO
+.Xr macoswheels-range 1 ,
+.Xr macoswheels-autocenter 1 ,
+.Xr macoswheels 7
+.Sh AUTHORS
+.An Renaud Allard Aq Mt renaud@allard.it

@@ -1,0 +1,76 @@
+name: Macoswheels
+options:
+  bundleIdPrefix: it.allard.macoswheels
+  deploymentTarget:
+    macOS: "14.0"
+    driverKit: "23.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    CODE_SIGN_STYLE: Manual
+    DEVELOPMENT_TEAM: "$(DEVELOPMENT_TEAM)"
+    ENABLE_HARDENED_RUNTIME: "YES"
+
+packages:
+  Macoswheels:
+    path: .
+
+targets:
+  MacoswheelsDEXT:
+    type: driver-extension
+    platform: macOS
+    sources:
+      - path: Sources/DEXT
+    dependencies:
+      - package: Macoswheels
+        product: WheelProtocol
+      - package: Macoswheels
+        product: WheelRegistry
+      - package: Macoswheels
+        product: Drivers
+      - package: Macoswheels
+        product: HIDDescriptors
+      - package: Macoswheels
+        product: FFBNormalizer
+      - package: Macoswheels
+        product: ConfigPlane
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: it.allard.macoswheels.dext
+        INFOPLIST_FILE: Sources/DEXT/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Sources/DEXT/Macoswheels.entitlements
+        SDKROOT: driverkit
+        SUPPORTED_PLATFORMS: driverkit
+
+  MacoswheelsContainer:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/Container
+    dependencies:
+      - target: MacoswheelsDEXT
+        embed: true
+        codeSign: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: it.allard.macoswheels
+        INFOPLIST_FILE: Sources/Container/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Sources/Container/Macoswheels.entitlements
+
+  Macoswheels:
+    type: tool
+    platform: macOS
+    sources:
+      - path: Sources/CLI
+    dependencies:
+      - package: Macoswheels
+        product: WheelProtocol
+      - package: Macoswheels
+        product: WheelRegistry
+      - package: Macoswheels
+        product: ConfigPlane
+    settings:
+      base:
+        PRODUCT_NAME: macoswheels

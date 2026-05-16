@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCHEME="${1:-MacoswheelsContainer}"
+CONFIG="${2:-Release}"
+SHA="${GITHUB_SHA:-$(git rev-parse --short HEAD 2>/dev/null || echo dev)}"
+
+BUILD_DIR="build"
+ARCHIVE="$BUILD_DIR/Macoswheels.xcarchive"
+ARTIFACT_DIR="$BUILD_DIR/artifact"
+ZIP="$BUILD_DIR/macoswheels-${SHA}.zip"
+
+mkdir -p "$BUILD_DIR"
+xcodebuild -project Macoswheels.xcodeproj \
+           -scheme "$SCHEME" \
+           -configuration "$CONFIG" \
+           -destination 'platform=macOS' \
+           -archivePath "$ARCHIVE" \
+           archive
+
+rm -rf "$ARTIFACT_DIR"
+mkdir -p "$ARTIFACT_DIR"
+cp -R "$ARCHIVE/Products/Applications/MacoswheelsContainer.app" "$ARTIFACT_DIR/"
+cp -R Tools/dev-load.sh "$ARTIFACT_DIR/"
+cp -R man "$ARTIFACT_DIR/"
+
+(cd "$BUILD_DIR" && zip -r9 "$(basename "$ZIP")" "$(basename "$ARTIFACT_DIR")")
+echo "$ZIP"

@@ -1,0 +1,24 @@
+.Dd May 17, 2026
+.Dt MACOSWHEELS-AUTOCENTER 1
+.Os
+.Sh NAME
+.Nm macoswheels-autocenter
+.Nd set autocenter spring strength of a racing wheel
+.Sh SYNOPSIS
+.Nm macoswheels
+.Cm autocenter
+.Ar percent
+.Op Ar wheel
+.Sh DESCRIPTION
+Sets the autocenter spring strength of the selected wheel.
+Value is a percentage from 0 (no centering force) to 100
+(maximum centering force the wheel hardware supports).
+.Pp
+This setting is independent of any in-game spring effect.
+Games that drive their own spring through the PID interface
+override this temporarily; the value is restored when the
+game releases the effect.
+.Sh EXIT STATUS
+.Ex -std
+.Sh SEE ALSO
+.Xr macoswheels 1

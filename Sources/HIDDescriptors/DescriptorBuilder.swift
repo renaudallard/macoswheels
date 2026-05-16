@@ -1,0 +1,93 @@
+import WheelProtocol
+
+public enum DescriptorBuilder {
+
+    public static func build(for caps: WheelCapabilities) -> [UInt8] {
+        switch caps.role {
+        case .wheelBase: return wheelBase(caps)
+        case .shifter:   return shifter(caps)
+        case .pedals:    return pedals(caps)
+        case .handbrake: return handbrake(caps)
+        }
+    }
+
+    private static func wheelBase(_ caps: WheelCapabilities) -> [UInt8] {
+        var d: [UInt8] = []
+        d += [0x05, 0x01]
+        d += [0x09, 0x04]
+        d += [0xA1, 0x01]
+        d += [0x85, 0x01]
+
+        d += [0x09, 0x30]
+        d += [0x16, 0x00, 0x80]
+        d += [0x26, 0xFF, 0x7F]
+        d += [0x75, 0x10, 0x95, 0x01, 0x81, 0x02]
+
+        if caps.pedalCount >= 1 {
+            d += [0x09, 0x31]
+            d += [0x15, 0x00, 0x26, 0xFF, 0x03]
+            d += [0x75, 0x10, 0x95, 0x01, 0x81, 0x02]
+        }
+        if caps.pedalCount >= 2 {
+            d += [0x09, 0x35]
+            d += [0x15, 0x00, 0x26, 0xFF, 0x03]
+            d += [0x75, 0x10, 0x95, 0x01, 0x81, 0x02]
+        }
+        if caps.pedalCount >= 3 {
+            d += [0x09, 0x32]
+            d += [0x15, 0x00, 0x26, 0xFF, 0x03]
+            d += [0x75, 0x10, 0x95, 0x01, 0x81, 0x02]
+        }
+
+        let nButtons = caps.buttonCount
+        if nButtons > 0 {
+            d += [0x05, 0x09]
+            d += [0x19, 0x01, 0x29, nButtons]
+            d += [0x15, 0x00, 0x25, 0x01]
+            d += [0x75, 0x01, 0x95, nButtons, 0x81, 0x02]
+            let pad = (8 - (Int(nButtons) % 8)) % 8
+            if pad > 0 {
+                d += [0x75, UInt8(pad), 0x95, 0x01, 0x81, 0x03]
+            }
+        }
+
+        d += PIDCollection.bytes
+        d += [0xC0]
+        return d
+    }
+
+    private static func shifter(_ caps: WheelCapabilities) -> [UInt8] {
+        var d: [UInt8] = []
+        d += [0x05, 0x01, 0x09, 0x04, 0xA1, 0x01, 0x85, 0x01]
+        d += [0x05, 0x09]
+        d += [0x19, 0x01, 0x29, max(caps.buttonCount, 1)]
+        d += [0x15, 0x00, 0x25, 0x01]
+        d += [0x75, 0x01, 0x95, max(caps.buttonCount, 1), 0x81, 0x02]
+        let pad = (8 - (Int(max(caps.buttonCount, 1)) % 8)) % 8
+        if pad > 0 {
+            d += [0x75, UInt8(pad), 0x95, 0x01, 0x81, 0x03]
+        }
+        d += [0xC0]
+        return d
+    }
+
+    private static func pedals(_ caps: WheelCapabilities) -> [UInt8] {
+        var d: [UInt8] = []
+        d += [0x05, 0x01, 0x09, 0x04, 0xA1, 0x01, 0x85, 0x01]
+        let axes: [UInt8] = [0x31, 0x35, 0x32]
+        for i in 0..<min(Int(caps.pedalCount), axes.count) {
+            d += [0x09, axes[i], 0x15, 0x00, 0x26, 0xFF, 0x03, 0x75, 0x10, 0x95, 0x01, 0x81, 0x02]
+        }
+        d += [0xC0]
+        return d
+    }
+
+    private static func handbrake(_ caps: WheelCapabilities) -> [UInt8] {
+        var d: [UInt8] = []
+        d += [0x05, 0x01, 0x09, 0x04, 0xA1, 0x01, 0x85, 0x01]
+        d += [0x09, 0x36, 0x15, 0x00, 0x26, 0xFF, 0x03, 0x75, 0x10, 0x95, 0x01, 0x81, 0x02]
+        d += [0xC0]
+        let _ = caps
+        return d
+    }
+}

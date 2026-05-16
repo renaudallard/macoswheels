@@ -1,0 +1,27 @@
+.build/
+.swiftpm/
+Packages/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+
+# Generated project (xcodegen writes this from project.yml)
+Macoswheels.xcodeproj/
+
+# CI build output
+build/
+artifacts/
+
+# Editor scratch
+.vscode/
+.idea/
+*.swp
+*~
+
+# macOS
+.DS_Store
+
+# Captured USB traces (size; users opt in)
+*.pcap
+*.pcapng

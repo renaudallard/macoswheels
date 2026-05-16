@@ -1,0 +1,68 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  linux-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Swift
+        uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.0"
+      - name: swift build
+        run: swift build -v
+      - name: swift test
+        run: swift test --enable-code-coverage
+
+  mac-build:
+    runs-on: macos-15
+    needs: linux-tests
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.app
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Import signing cert
+        env:
+          CERT_P12_BASE64: ${{ secrets.CERT_P12_BASE64 }}
+          CERT_P12_PWD: ${{ secrets.CERT_P12_PWD }}
+        run: |
+          if [ -n "${CERT_P12_BASE64:-}" ]; then
+            bash ci/import-cert.sh
+          else
+            echo "No signing cert configured; build will be unsigned (dev-only)."
+          fi
+
+      - name: Build container + DEXT + CLI
+        env:
+          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
+        run: |
+          xcodebuild -project Macoswheels.xcodeproj \
+                     -scheme MacoswheelsContainer \
+                     -configuration Release \
+                     -destination 'platform=macOS' \
+                     build
+
+      - name: Package artifact
+        run: bash ci/sign-and-package.sh MacoswheelsContainer Release
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: macoswheels-${{ github.sha }}
+          path: build/macoswheels-*.zip
+          if-no-files-found: error
