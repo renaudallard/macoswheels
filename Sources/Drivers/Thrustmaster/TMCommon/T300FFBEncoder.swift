@@ -4,8 +4,20 @@ public enum T300FFBEncoder {
 
     public static let opcodeConstant:  UInt8 = 0x6A
     public static let opcodeCondition: UInt8 = 0x64
+    public static let opcodePeriodic:  UInt8 = 0x6B
     public static let opcodePlay:      UInt8 = 0x89
     public static let codePlay:        UInt8 = 0x41
+
+    private static func waveformByte(_ kind: EffectKind) -> UInt8? {
+        switch kind {
+        case .squarePeriodic:       return 0x01
+        case .trianglePeriodic:     return 0x02
+        case .sinePeriodic:         return 0x03
+        case .sawtoothUpPeriodic:   return 0x04
+        case .sawtoothDownPeriodic: return 0x05
+        default:                    return nil
+        }
+    }
 
     private static let conditionHardcoded: [UInt8] = [
         0xFE, 0xFF, 0xFE, 0xFF, 0xFE, 0xFF, 0xFE, 0xFF,
@@ -26,7 +38,14 @@ public enum T300FFBEncoder {
             return [conditionUpload(slot: slot, params: p, kind: .friction)]
         case .inertia(let slot, let p):
             return [conditionUpload(slot: slot, params: p, kind: .inertia)]
-        case .ramp, .periodic, .customForceData:
+        case .periodic(let slot, let kind, let params, let duration, let env):
+            guard let wave = Self.waveformByte(kind) else { throw DriverError.effectNotSupported(kind) }
+            return [periodicUpload(slot: slot,
+                                   waveform: wave,
+                                   params: params,
+                                   duration: duration,
+                                   envelope: env)]
+        case .ramp, .customForceData:
             throw DriverError.notImplemented
         }
     }
@@ -92,6 +111,25 @@ public enum T300FFBEncoder {
         bytes += le16(kind.maxSaturation)
         bytes += [kind.typeByte]
         bytes += timingBytes(durationMs: 0xFFFF, offsetMs: 0)
+        return .interruptOut(endpoint: TMOpcode.interruptOutEndpoint, bytes: bytes)
+    }
+
+    private static func periodicUpload(slot: UInt8,
+                                       waveform: UInt8,
+                                       params: PeriodicParams,
+                                       duration: UInt32,
+                                       envelope: Envelope?) -> USBPacket
+    {
+        let dur = duration == 0 ? UInt16(0xFFFF) : UInt16(min(duration, UInt32(UInt16.max - 1)))
+        var bytes: [UInt8] = [0x00, slot &+ 1, opcodePeriodic]
+        bytes += le16(UInt16(bitPattern: params.magnitude))
+        bytes += le16(UInt16(bitPattern: params.offset))
+        bytes += le16(params.phase)
+        bytes += le16(UInt16(min(params.period, UInt32(UInt16.max))))
+        bytes += le16(0x8000)
+        bytes += envelopeBytes(envelope)
+        bytes += [waveform]
+        bytes += timingBytes(durationMs: dur, offsetMs: 0)
         return .interruptOut(endpoint: TMOpcode.interruptOutEndpoint, bytes: bytes)
     }
 

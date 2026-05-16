@@ -67,6 +67,46 @@ final class T300FFBEncoderTests: XCTestCase {
             .ramp(slot: 0, start: 0, end: 100, duration: 1000, envelope: nil)))
     }
 
+    func testSineWaveformByteIs0x03() throws {
+        let pkts = try T300FFBEncoder.encode(
+            .periodic(slot: 0, kind: .sinePeriodic,
+                      params: PeriodicParams(magnitude: 0x4000, offset: 0, phase: 0, period: 1000),
+                      duration: 1000, envelope: nil))
+        guard case .interruptOut(_, let bytes) = pkts[0] else { return XCTFail() }
+        XCTAssertEqual(bytes[2], 0x6B)
+        let waveform = bytes[bytes.count - 11]
+        XCTAssertEqual(waveform, 0x03)
+    }
+
+    func testSquareWaveformByteIs0x01() throws {
+        let pkts = try T300FFBEncoder.encode(
+            .periodic(slot: 0, kind: .squarePeriodic,
+                      params: PeriodicParams(magnitude: 0x4000, offset: 0, phase: 0, period: 500),
+                      duration: 1000, envelope: nil))
+        guard case .interruptOut(_, let bytes) = pkts[0] else { return XCTFail() }
+        XCTAssertEqual(bytes[bytes.count - 11], 0x01)
+    }
+
+    func testSawDownWaveformByteIs0x05() throws {
+        let pkts = try T300FFBEncoder.encode(
+            .periodic(slot: 0, kind: .sawtoothDownPeriodic,
+                      params: PeriodicParams(magnitude: 0x4000, offset: 0, phase: 0, period: 500),
+                      duration: 1000, envelope: nil))
+        guard case .interruptOut(_, let bytes) = pkts[0] else { return XCTFail() }
+        XCTAssertEqual(bytes[bytes.count - 11], 0x05)
+    }
+
+    func testPeriodicMarkerIs0x8000() throws {
+        let pkts = try T300FFBEncoder.encode(
+            .periodic(slot: 1, kind: .sinePeriodic,
+                      params: PeriodicParams(magnitude: 0x1000, offset: 0, phase: 0, period: 500),
+                      duration: 1000, envelope: nil))
+        guard case .interruptOut(_, let bytes) = pkts[0] else { return XCTFail() }
+        let markerIdx = 3 + 8
+        let marker = UInt16(bytes[markerIdx]) | (UInt16(bytes[markerIdx + 1]) << 8)
+        XCTAssertEqual(marker, 0x8000)
+    }
+
     func testPlayPacketStructure() {
         guard case .interruptOut(_, let bytes) = T300FFBEncoder.playPacket(slot: 2, repeats: 5) else {
             return XCTFail()
