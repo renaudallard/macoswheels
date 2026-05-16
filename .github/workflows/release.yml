@@ -44,11 +44,15 @@ jobs:
         run: xcodegen generate
 
       - name: Import signing cert
-        if: ${{ secrets.CERT_P12_BASE64 != '' }}
         env:
           CERT_P12_BASE64: ${{ secrets.CERT_P12_BASE64 }}
           CERT_P12_PWD: ${{ secrets.CERT_P12_PWD }}
-        run: bash ci/import-cert.sh
+        run: |
+          if [ -n "${CERT_P12_BASE64:-}" ]; then
+            bash ci/import-cert.sh
+          else
+            echo "No signing cert configured; release artifact will be unsigned dev build."
+          fi
 
       - name: Build container + DEXT + CLI
         env:
