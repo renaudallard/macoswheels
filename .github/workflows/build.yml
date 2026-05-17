@@ -20,8 +20,20 @@ jobs:
       - name: swift test
         run: swift test --enable-code-coverage
 
+  lint:
+    runs-on: macos-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: swift-format lint
+        run: |
+          swift format lint --recursive --strict Sources/ Tests/ 2>&1 | tee lint.log
+          if [ -s lint.log ]; then
+            echo "::warning::swift-format reported lint issues; see job log."
+          fi
+
   mac-build:
-    runs-on: macos-15
+    runs-on: macos-latest
     needs: linux-tests
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
