@@ -19,20 +19,21 @@
 #include "HIDExport.h"
 #include "TMSettings.hpp"
 #include "TMBootSwitch.hpp"
+#include "WheelProtocol.hpp"
 
 #define Log(fmt, ...) \
     os_log(OS_LOG_DEFAULT, "MacoswheelsDriver: " fmt, ##__VA_ARGS__)
 
 struct MacoswheelsDriver_IVars {
-    IOUSBHostInterface *interface;
-    IOUSBHostPipe      *outPipe;
-    HIDExport          *hidExport;
-    uint16_t            vendorID;
-    uint16_t            productID;
-    uint16_t            maxRangeDegrees;
-    uint16_t            currentRange;
-    uint8_t             currentAutocenter;
-    uint8_t             currentGain;
+    IOUSBHostInterface  *interface;
+    IOUSBHostPipe       *outPipe;
+    HIDExport           *hidExport;
+    const WheelProtocol *protocol;
+    uint16_t             vendorID;
+    uint16_t             productID;
+    uint16_t             currentRange;
+    uint8_t              currentAutocenter;
+    uint8_t              currentGain;
 };
 
 bool MacoswheelsDriver::init() {
@@ -42,7 +43,6 @@ bool MacoswheelsDriver::init() {
     if (!ivars) return false;
     ivars->currentRange = 900;
     ivars->currentGain = 75;
-    ivars->maxRangeDegrees = 1080;
     return true;
 }
 
@@ -198,15 +198,32 @@ kern_return_t IMPL(MacoswheelsDriver, Start) {
         OSSafeReleaseNULL(dev);
     }
 
+    ivars->protocol = findWheelProtocol(ivars->vendorID, ivars->productID);
+    if (!ivars->protocol) {
+        Log("no WheelProtocol registered for %04x:%04x",
+            ivars->vendorID, ivars->productID);
+        iface->Close(this, 0);
+        ivars->interface = NULL;
+        Stop(provider, SUPERDISPATCH);
+        return kIOReturnUnsupported;
+    }
+    Log("dispatching as '%s'", ivars->protocol->displayName);
+    if (ivars->currentRange < ivars->protocol->minRangeDegrees) {
+        ivars->currentRange = ivars->protocol->minRangeDegrees;
+    }
+    if (ivars->currentRange > ivars->protocol->maxRangeDegrees) {
+        ivars->currentRange = ivars->protocol->maxRangeDegrees;
+    }
+
     IOUSBHostPipe *outPipe = NULL;
-    iface->CopyPipe(TMSettings::kInterruptOutEndpoint, &outPipe);
+    iface->CopyPipe(ivars->protocol->interruptOutEndpoint, &outPipe);
     if (outPipe) {
         ivars->outPipe = outPipe;
         Log("interrupt-OUT pipe at 0x%02x acquired",
-            TMSettings::kInterruptOutEndpoint);
+            ivars->protocol->interruptOutEndpoint);
     } else {
         Log("failed to acquire interrupt-OUT pipe at 0x%02x",
-            TMSettings::kInterruptOutEndpoint);
+            ivars->protocol->interruptOutEndpoint);
     }
 
     IOService *hidService = NULL;
@@ -254,11 +271,16 @@ kern_return_t IMPL(MacoswheelsDriver, NewUserClient) {
 }
 
 kern_return_t MacoswheelsDriver::SetRotationRange(uint16_t degrees) {
-    if (degrees > ivars->maxRangeDegrees) degrees = ivars->maxRangeDegrees;
+    if (!ivars->protocol || !ivars->protocol->setRotationRange) {
+        return kIOReturnUnsupported;
+    }
+    uint16_t maxDeg = ivars->protocol->maxRangeDegrees;
+    uint16_t minDeg = ivars->protocol->minRangeDegrees;
+    if (degrees > maxDeg) degrees = maxDeg;
+    if (degrees < minDeg) degrees = minDeg;
     Log("SetRotationRange %u", degrees);
-    uint8_t pkt[4];
-    size_t n = TMSettings::setRotationRangePacket(
-        degrees, ivars->maxRangeDegrees, pkt, sizeof(pkt));
+    uint8_t pkt[16];
+    size_t n = ivars->protocol->setRotationRange(degrees, maxDeg, pkt, sizeof(pkt));
     if (n == 0) return kIOReturnBadArgument;
     kern_return_t ret = sendBytes(ivars->outPipe, pkt, n);
     if (ret == kIOReturnSuccess) ivars->currentRange = degrees;
@@ -266,25 +288,36 @@ kern_return_t MacoswheelsDriver::SetRotationRange(uint16_t degrees) {
 }
 
 kern_return_t MacoswheelsDriver::SetAutocenter(uint8_t percent) {
+    if (!ivars->protocol) return kIOReturnUnsupported;
     if (percent > 100) percent = 100;
     Log("SetAutocenter %u%%", percent);
-    uint8_t enablePkt[4], strengthPkt[4];
-    size_t enableN = TMSettings::setAutocenterEnabledPacket(
-        percent > 0, enablePkt, sizeof(enablePkt));
-    size_t strengthN = TMSettings::setAutocenterStrengthPacket(
-        percent, strengthPkt, sizeof(strengthPkt));
-    kern_return_t ret = sendBytes(ivars->outPipe, enablePkt, enableN);
-    if (ret != kIOReturnSuccess) return ret;
-    ret = sendBytes(ivars->outPipe, strengthPkt, strengthN);
+    uint8_t enablePkt[16], strengthPkt[16];
+    kern_return_t ret = kIOReturnSuccess;
+    if (ivars->protocol->setAutocenterEnable) {
+        size_t en = ivars->protocol->setAutocenterEnable(
+            percent > 0, enablePkt, sizeof(enablePkt));
+        if (en > 0) {
+            ret = sendBytes(ivars->outPipe, enablePkt, en);
+            if (ret != kIOReturnSuccess) return ret;
+        }
+    }
+    if (ivars->protocol->setAutocenterStrength) {
+        size_t sn = ivars->protocol->setAutocenterStrength(
+            percent, strengthPkt, sizeof(strengthPkt));
+        if (sn > 0) {
+            ret = sendBytes(ivars->outPipe, strengthPkt, sn);
+        }
+    }
     if (ret == kIOReturnSuccess) ivars->currentAutocenter = percent;
     return ret;
 }
 
 kern_return_t MacoswheelsDriver::SetGain(uint8_t percent) {
+    if (!ivars->protocol || !ivars->protocol->setGain) return kIOReturnUnsupported;
     if (percent > 100) percent = 100;
     Log("SetGain %u%%", percent);
-    uint8_t pkt[2];
-    size_t n = TMSettings::setGainPacket(percent, pkt, sizeof(pkt));
+    uint8_t pkt[16];
+    size_t n = ivars->protocol->setGain(percent, pkt, sizeof(pkt));
     kern_return_t ret = sendBytes(ivars->outPipe, pkt, n);
     if (ret == kIOReturnSuccess) ivars->currentGain = percent;
     return ret;
