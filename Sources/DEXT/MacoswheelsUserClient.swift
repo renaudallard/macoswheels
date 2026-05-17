@@ -25,40 +25,79 @@ final class MacoswheelsUserClient: IOUserClient {
         guard let sel = UserClientSelector(rawValue: selector) else {
             return kIOReturnBadArgument
         }
-        guard let driver = driver else { return kIOReturnNotReady }
+        guard let driver = driver, let session = driver.session else {
+            return kIOReturnNotReady
+        }
         switch sel {
-        case .getDeviceList:    return handleGetDeviceList(driver: driver)
-        case .getInfo:          return handleGetInfo(driver: driver)
-        case .getCapabilities:  return handleGetCapabilities(driver: driver)
-        case .setRotationRange: return handleSetRange(driver: driver)
-        case .setAutocenter:    return handleSetAutocenter(driver: driver)
-        case .setGain:          return handleSetGain(driver: driver)
-        case .reset:            return handleReset(driver: driver)
+        case .getDeviceList:    return handleGetDeviceList(session: session)
+        case .getInfo:          return handleGetInfo(session: session)
+        case .getCapabilities:  return handleGetCapabilities(session: session)
+        case .setRotationRange: return handleSetRange(session: session)
+        case .setAutocenter:    return handleSetAutocenter(session: session)
+        case .setGain:          return handleSetGain(session: session)
+        case .reset:            return handleReset(session: session)
         case .vendorCommand:    return kIOReturnUnsupported
         }
     }
 
-    private func handleGetDeviceList(driver: MacoswheelsDriver) -> IOReturn {
+    private func handleGetDeviceList(session: WheelSession) -> IOReturn {
         kIOReturnSuccess
     }
-    private func handleGetInfo(driver: MacoswheelsDriver) -> IOReturn {
+
+    private func handleGetInfo(session: WheelSession) -> IOReturn {
         kIOReturnSuccess
     }
-    private func handleGetCapabilities(driver: MacoswheelsDriver) -> IOReturn {
+
+    private func handleGetCapabilities(session: WheelSession) -> IOReturn {
         kIOReturnSuccess
     }
-    private func handleSetRange(driver: MacoswheelsDriver) -> IOReturn {
-        kIOReturnSuccess
+
+    private func handleSetRange(session: WheelSession) -> IOReturn {
+        guard let req = readInput(SetRangeRequest.self) else { return kIOReturnBadArgument }
+        do {
+            try session.driver.setRotationRange(degrees: req.degrees)
+            return kIOReturnSuccess
+        } catch {
+            os_log("setRotationRange failed: %{public}@", log: log, type: .error, String(describing: error))
+            return kIOReturnError
+        }
     }
-    private func handleSetAutocenter(driver: MacoswheelsDriver) -> IOReturn {
-        kIOReturnSuccess
+
+    private func handleSetAutocenter(session: WheelSession) -> IOReturn {
+        guard let req = readInput(SetByteRequest.self) else { return kIOReturnBadArgument }
+        do {
+            try session.driver.setAutocenter(strength: req.value)
+            return kIOReturnSuccess
+        } catch {
+            os_log("setAutocenter failed: %{public}@", log: log, type: .error, String(describing: error))
+            return kIOReturnError
+        }
     }
-    private func handleSetGain(driver: MacoswheelsDriver) -> IOReturn {
-        kIOReturnSuccess
+
+    private func handleSetGain(session: WheelSession) -> IOReturn {
+        guard let req = readInput(SetByteRequest.self) else { return kIOReturnBadArgument }
+        do {
+            try session.driver.setGain(req.value)
+            return kIOReturnSuccess
+        } catch {
+            os_log("setGain failed: %{public}@", log: log, type: .error, String(describing: error))
+            return kIOReturnError
+        }
     }
-    private func handleReset(driver: MacoswheelsDriver) -> IOReturn {
-        do { try driver.session?.driver.initialize(); return kIOReturnSuccess }
-        catch { return kIOReturnInternalError }
+
+    private func handleReset(session: WheelSession) -> IOReturn {
+        do {
+            try session.driver.stopAllEffects()
+            try session.driver.initialize()
+            return kIOReturnSuccess
+        } catch {
+            os_log("reset failed: %{public}@", log: log, type: .error, String(describing: error))
+            return kIOReturnError
+        }
+    }
+
+    private func readInput<T>(_ type: T.Type) -> T? {
+        nil
     }
 }
 
