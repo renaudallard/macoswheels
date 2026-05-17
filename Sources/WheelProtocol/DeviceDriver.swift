@@ -20,6 +20,29 @@ public enum DriverError: Error, Sendable, Hashable {
     case notImplemented
 }
 
+extension DriverError: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .notInitialized:
+            return "driver not initialized"
+        case .unsupportedForRole(let role):
+            return "not supported for \(role.rawValue)"
+        case .effectNotSupported(let kind):
+            return "effect not supported by this wheel: \(kind)"
+        case .effectSlotInvalid(let slot):
+            return "invalid effect slot \(slot)"
+        case .rangeOutOfBounds(let requested, let min, let max):
+            return "rotation range \(requested) out of bounds (\(min)..\(max))"
+        case .bootSwitchPending:
+            return "boot-to-firmware mode switch in progress"
+        case .usb(let underlying):
+            return "USB transport error: \(underlying)"
+        case .notImplemented:
+            return "not implemented for this wheel yet"
+        }
+    }
+}
+
 public protocol DeviceDriverDelegate: AnyObject, Sendable {
     func driver(_ driver: any DeviceDriver, didEmitHIDReport bytes: [UInt8])
     func driver(_ driver: any DeviceDriver, didFailWith error: Error)
