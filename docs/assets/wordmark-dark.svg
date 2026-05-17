@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 320" preserveAspectRatio="xMidYMid meet" role="img" aria-label="macoswheels">
+  <defs>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f3f6fb"/>
+      <stop offset="100%" stop-color="#a9b6cc"/>
+    </linearGradient>
+    <radialGradient id="hub" cx="0.5" cy="0.45" r="0.7">
+      <stop offset="0%" stop-color="#ffd07a"/>
+      <stop offset="60%" stop-color="#f29036"/>
+      <stop offset="100%" stop-color="#a8460b"/>
+    </radialGradient>
+  </defs>
+  <style>
+    .word {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-weight: 900;
+      font-size: 220px;
+      letter-spacing: -8px;
+    }
+  </style>
+  <g transform="translate(40, 40)">
+    <circle cx="120" cy="120" r="100" fill="none" stroke="url(#rim)" stroke-width="20"/>
+    <circle cx="120" cy="120" r="28" fill="url(#hub)"/>
+    <g stroke="url(#rim)" stroke-width="16" stroke-linecap="round" fill="none">
+      <line x1="120" y1="36" x2="120" y2="92"/>
+      <line x1="120" y1="148" x2="120" y2="204"/>
+      <line x1="36" y1="120" x2="92" y2="120"/>
+      <line x1="148" y1="120" x2="204" y2="120"/>
+    </g>
+  </g>
+  <text x="320" y="220" class="word" fill="#f3f6fb">macoswheels</text>
+  <rect x="320" y="248" width="160" height="14" rx="4" fill="#ffb04a"/>
+</svg>
