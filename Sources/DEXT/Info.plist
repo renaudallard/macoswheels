@@ -18,6 +18,28 @@
     <string>1</string>
     <key>OSBundleUsageDescription</key>
     <string>Drives Thrustmaster T-series and Logitech G-series racing wheels.</string>
+    <key>HIDExportProperties</key>
+    <dict>
+        <key>CFBundleIdentifier</key>
+        <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+        <key>CFBundleIdentifierKernel</key>
+        <string>com.apple.kpi.iokit</string>
+        <key>IOClass</key>
+        <string>IOUserService</string>
+        <key>IOUserClass</key>
+        <string>HIDExport</string>
+    </dict>
+    <key>MacoswheelsUserClientProperties</key>
+    <dict>
+        <key>CFBundleIdentifier</key>
+        <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+        <key>CFBundleIdentifierKernel</key>
+        <string>com.apple.kpi.iokit</string>
+        <key>IOClass</key>
+        <string>IOUserUserClient</string>
+        <key>IOUserClass</key>
+        <string>MacoswheelsUserClient</string>
+    </dict>
     <key>IOKitPersonalities</key>
     <dict>
         <key>TSeries-Boot</key>
