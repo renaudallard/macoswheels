@@ -131,7 +131,7 @@ swift test
 .build/debug/macoswheels list
 ```
 
-Covers `WheelProtocol`, `WheelRegistry`, `Drivers`, `HIDDescriptors`, `FFBNormalizer`, `ConfigPlane`, and the `macoswheels` CLI. 108 tests.
+Covers `WheelProtocol`, `WheelRegistry`, `Drivers`, `HIDDescriptors`, `FFBNormalizer`, `ConfigPlane`, and the `macoswheels` CLI. 125 tests.
 
 **macOS (DEXT + container app, only on macOS hosts):**
 
@@ -163,7 +163,7 @@ Sources/
   DEXT/                 DriverKit System Extension (Swift)
   Container/            SwiftUI container app (DEXT activator + sliders GUI)
   CLI/                  `macoswheels` binary
-Tests/                  Linux-runnable XCTest suites (108 tests)
+Tests/                  Linux-runnable XCTest suites (125 tests)
 man/                    mdoc man pages
 docs/                   ARCHITECTURE.md, ADDING-A-DEVICE.md, DEV-MODE-SETUP.md
 ci/                     GitHub Actions helper scripts
