@@ -4,7 +4,9 @@
 
 #include <DriverKit/IOLib.h>
 #include <DriverKit/IOService.h>
+#include <DriverKit/IOMemoryDescriptor.h>
 #include <DriverKit/IOUserClient.h>
+#include <DriverKit/OSData.h>
 #include <DriverKit/OSNumber.h>
 
 #include "MacoswheelsUserClient.h"
@@ -57,6 +59,37 @@ kern_return_t IMPL(MacoswheelsUserClient, Stop) {
     return Stop(provider, SUPERDISPATCH);
 }
 
+// Layouts match Sources/ConfigPlane/UserClientAPI.swift exactly. Swift packs
+// these structs without trailing padding, so __attribute__((packed)) on the
+// C side reads the same bytes.
+struct __attribute__((packed)) SetRangeReq {
+    uint64_t registryID;
+    uint16_t degrees;
+};
+
+struct __attribute__((packed)) SetByteReq {
+    uint64_t registryID;
+    uint8_t  value;
+};
+
+static const uint8_t *mapStructureInput(IOUserClientMethodArguments *args,
+                                        size_t expected, uint8_t *scratch)
+{
+    if (!args) return NULL;
+    if (args->structureInput == NULL) {
+        // Newer DriverKit places small struct payloads in structureInput as
+        // an OSData; older paths use structureInputDescriptor. Try both.
+        if (args->structureInputDescriptor == NULL) return NULL;
+        uint64_t addr = 0, len = 0;
+        args->structureInputDescriptor->Map(0, 0, 0, 0, &addr, &len);
+        if (!addr || len < expected) return NULL;
+        memcpy(scratch, (const void *)(uintptr_t)addr, expected);
+        return scratch;
+    }
+    if (args->structureInput->getLength() < expected) return NULL;
+    return (const uint8_t *)args->structureInput->getBytesNoCopy();
+}
+
 kern_return_t MacoswheelsUserClient::ExternalMethod(
     uint64_t selector,
     IOUserClientMethodArguments *arguments,
@@ -67,21 +100,29 @@ kern_return_t MacoswheelsUserClient::ExternalMethod(
     MacoswheelsDriver *driver = ivars->driver;
     if (driver == NULL) return kIOReturnNotReady;
 
+    uint8_t scratch[16] = {0};
+
     switch (selector) {
     case kSelectorSetRotationRange: {
-        if (arguments->scalarInputCount < 1) return kIOReturnBadArgument;
-        uint16_t degrees = (uint16_t) arguments->scalarInput[0];
-        return driver->SetRotationRange(degrees);
+        const uint8_t *bytes = mapStructureInput(
+            arguments, sizeof(SetRangeReq), scratch);
+        if (!bytes) return kIOReturnBadArgument;
+        const SetRangeReq *req = (const SetRangeReq *)bytes;
+        return driver->SetRotationRange(req->degrees);
     }
     case kSelectorSetAutocenter: {
-        if (arguments->scalarInputCount < 1) return kIOReturnBadArgument;
-        uint8_t pct = (uint8_t) arguments->scalarInput[0];
-        return driver->SetAutocenter(pct);
+        const uint8_t *bytes = mapStructureInput(
+            arguments, sizeof(SetByteReq), scratch);
+        if (!bytes) return kIOReturnBadArgument;
+        const SetByteReq *req = (const SetByteReq *)bytes;
+        return driver->SetAutocenter(req->value);
     }
     case kSelectorSetGain: {
-        if (arguments->scalarInputCount < 1) return kIOReturnBadArgument;
-        uint8_t pct = (uint8_t) arguments->scalarInput[0];
-        return driver->SetGain(pct);
+        const uint8_t *bytes = mapStructureInput(
+            arguments, sizeof(SetByteReq), scratch);
+        if (!bytes) return kIOReturnBadArgument;
+        const SetByteReq *req = (const SetByteReq *)bytes;
+        return driver->SetGain(req->value);
     }
     case kSelectorReset:
         return driver->ResetWheel();
