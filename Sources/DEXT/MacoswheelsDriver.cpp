@@ -84,28 +84,44 @@ static bool readBootMode(IOService *self) {
     return isBoot;
 }
 
-static kern_return_t runBootShim(IOUSBHostInterface *iface, IOService *self) {
-    uint8_t queryBuffer[16] = {0};
-    IOUSBDeviceRequest queryReq = {
-        .bmRequestType = 0xC1,
-        .bRequest      = 73,
-        .wValue        = 0,
-        .wIndex        = 0,
-        .wLength       = 16,
-    };
+static kern_return_t runBootShim(IOUSBHostInterface *iface) {
+    // Step 1: model query. Wrap a 16-byte buffer in an
+    // IOBufferMemoryDescriptor for the IN data stage.
+    IOBufferMemoryDescriptor *queryBuf = NULL;
+    kern_return_t ret = IOBufferMemoryDescriptor::Create(
+        kIOMemoryDirectionIn, 16, 0, &queryBuf);
+    if (ret != kIOReturnSuccess || !queryBuf) return ret;
+
     uint16_t bytesTransferred = 0;
-    kern_return_t ret = iface->DeviceRequest(self, queryReq, queryBuffer,
-                                             sizeof(queryBuffer),
-                                             &bytesTransferred, 1000);
+    ret = iface->DeviceRequest(/*bmRequestType*/ 0xC1,
+                               /*bRequest*/      73,
+                               /*wValue*/        0,
+                               /*wIndex*/        0,
+                               /*wLength*/       16,
+                               queryBuf,
+                               &bytesTransferred,
+                               /*completionTimeoutMs*/ 1000);
     if (ret != kIOReturnSuccess || bytesTransferred < 8) {
         os_log(OS_LOG_DEFAULT,
                "MacoswheelsDriver: boot model query failed 0x%x (%u bytes)",
                ret, bytesTransferred);
+        OSSafeReleaseNULL(queryBuf);
         return ret != kIOReturnSuccess ? ret : kIOReturnError;
     }
 
+    uint8_t queryBytes[16] = {0};
+    uint64_t addr = 0;
+    uint64_t length = 0;
+    queryBuf->Map(0, 0, 0, 0, &addr, &length);
+    if (addr) {
+        size_t copyLen = bytesTransferred < sizeof(queryBytes)
+            ? bytesTransferred : sizeof(queryBytes);
+        memcpy(queryBytes, (const void *)(uintptr_t)addr, copyLen);
+    }
+    OSSafeReleaseNULL(queryBuf);
+
     uint8_t model = 0, attachment = 0;
-    if (!TMBootSwitch::parseModelQuery(queryBuffer, bytesTransferred,
+    if (!TMBootSwitch::parseModelQuery(queryBytes, bytesTransferred,
                                        &model, &attachment)) {
         return kIOReturnUnsupported;
     }
@@ -120,15 +136,16 @@ static kern_return_t runBootShim(IOUSBHostInterface *iface, IOService *self) {
            "MacoswheelsDriver: detected %s, mode-switch 0x%04x",
            TMBootSwitch::lookupName(model, attachment), switchValue);
 
-    IOUSBDeviceRequest switchReq = {
-        .bmRequestType = 0x41,
-        .bRequest      = 83,
-        .wValue        = switchValue,
-        .wIndex        = 0,
-        .wLength       = 0,
-    };
+    // Step 2: mode switch. No data stage.
     uint16_t outBytes = 0;
-    ret = iface->DeviceRequest(self, switchReq, NULL, 0, &outBytes, 1000);
+    ret = iface->DeviceRequest(/*bmRequestType*/ 0x41,
+                               /*bRequest*/      83,
+                               /*wValue*/        switchValue,
+                               /*wIndex*/        0,
+                               /*wLength*/       0,
+                               /*dataDescriptor*/ NULL,
+                               &outBytes,
+                               /*completionTimeoutMs*/ 1000);
     if (ret != kIOReturnSuccess) {
         os_log(OS_LOG_DEFAULT,
                "MacoswheelsDriver: mode switch failed 0x%x", ret);
@@ -159,7 +176,7 @@ kern_return_t IMPL(MacoswheelsDriver, Start) {
 
     if (readBootMode(this)) {
         Log("matched boot personality; running model-query + mode-switch");
-        ret = runBootShim(iface, this);
+        ret = runBootShim(iface);
         if (ret != kIOReturnSuccess) {
             Log("boot shim failed 0x%x", ret);
         }
