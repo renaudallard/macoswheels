@@ -69,6 +69,8 @@ targets:
         product: WheelRegistry
       - package: Macoswheels
         product: ConfigPlane
+      - package: Macoswheels
+        product: Drivers
     settings:
       base:
         PRODUCT_NAME: macoswheels
