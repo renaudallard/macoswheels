@@ -15,8 +15,9 @@ final class WheelClient {
     private var connection: io_connect_t = 0
 
     init() throws {
-        let serviceName = driverServiceClassName as CFString
-        let matching = IOServiceMatching(serviceName) as CFDictionary
+        guard let matching = IOServiceMatching(driverServiceClassName) else {
+            throw WheelClientError.dextNotLoaded
+        }
         let service = IOServiceGetMatchingService(kIOMainPortDefault, matching)
         guard service != 0 else { throw WheelClientError.dextNotLoaded }
         defer { IOObjectRelease(service) }
