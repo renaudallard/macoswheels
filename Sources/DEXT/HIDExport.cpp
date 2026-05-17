@@ -14,6 +14,7 @@
 
 #include "HIDExport.h"
 #include "MacoswheelsDriver.h"
+#include "WheelProtocol.hpp"
 
 #define Log(fmt, ...) os_log(OS_LOG_DEFAULT, "HIDExport: " fmt, ##__VA_ARGS__)
 
