@@ -57,7 +57,13 @@ kern_return_t IMPL(MacoswheelsUserClient, Stop) {
     return Stop(provider, SUPERDISPATCH);
 }
 
-kern_return_t IMPL(MacoswheelsUserClient, ExternalMethod) {
+kern_return_t MacoswheelsUserClient::ExternalMethod(
+    uint64_t selector,
+    IOUserClientMethodArguments *arguments,
+    const IOUserClientMethodDispatch *dispatch,
+    OSObject *target,
+    void *reference)
+{
     MacoswheelsDriver *driver = ivars->driver;
     if (driver == NULL) return kIOReturnNotReady;
 
