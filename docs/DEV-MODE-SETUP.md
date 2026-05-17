@@ -47,7 +47,33 @@ systemextensionsctl developer
 
 Should print `Developer mode is on`.
 
-## 4. Notes on signing
+## 4. Why CI doesn't compile the DEXT
+
+The GitHub Actions `macos-latest` runner currently ships Xcode 26.3 with the
+DriverKit 25.2 SDK, but Apple has not yet shipped a Swift standard library for
+DriverKit in any installed Xcode. Every `swift-frontend` invocation against an
+`arm64-apple-driverkit*` target fails with:
+
+```
+error: Unable to find module dependency: 'Swift'
+error: Unable to find module dependency: 'Foundation'
+error: Unable to find module dependency: 'DriverKit'
+error: Unable to find module dependency: 'os'
+```
+
+This is a known limitation: Swift DriverKit support has been "preview-quality"
+since Xcode 13 (2021), and the stdlib for newer DriverKit deployment targets
+hasn't caught up. Most production DEXTs in the wild (Karabiner-DriverKit,
+SoftRAID, etc.) are still written in IIG / Objective-C++.
+
+Until Apple ships a stdlib (or until we accept rewriting the DEXT in IIG),
+`build.yml` builds only the `Macoswheels` (CLI) scheme on macOS to validate
+the macOS-side Swift surface. The DEXT code itself stays in the repo and can
+be compiled on a Mac with whatever future Xcode does support Swift DriverKit;
+the Linux unit-test suite covers the protocol encoders for all 14 wheels in
+the meantime.
+
+## 5. Notes on signing
 
 The CI artifact is signed with the project's Developer ID certificate, but
 the entitlements requested (`com.apple.developer.driverkit.*`) are gated by
@@ -57,4 +83,5 @@ setup above is required.
 
 If you have your own DriverKit entitlement grant, replace the team in
 `project.yml` (`DEVELOPMENT_TEAM`) and re-run the CI workflow; the resulting
-artifact will load on any Mac with SIP in default posture.
+artifact will load on any Mac with SIP in default posture (subject to the
+DEXT compile issue in section 4 above).
