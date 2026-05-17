@@ -24,16 +24,24 @@
 #define Log(fmt, ...) \
     os_log(OS_LOG_DEFAULT, "MacoswheelsDriver: " fmt, ##__VA_ARGS__)
 
+// Size of the buffer that holds raw wheel input bytes per AsyncIO round.
+// 64 bytes is USB full-speed wMaxPacketSize and a comfortable upper bound
+// for any T-series or Logitech input report.
+static const uint32_t kInputBufferSize = 64;
+
 struct MacoswheelsDriver_IVars {
-    IOUSBHostInterface  *interface;
-    IOUSBHostPipe       *outPipe;
-    HIDExport           *hidExport;
-    const WheelProtocol *protocol;
-    uint16_t             vendorID;
-    uint16_t             productID;
-    uint16_t             currentRange;
-    uint8_t              currentAutocenter;
-    uint8_t              currentGain;
+    IOUSBHostInterface       *interface;
+    IOUSBHostPipe            *outPipe;
+    IOUSBHostPipe            *inPipe;
+    IOBufferMemoryDescriptor *inBuffer;
+    OSAction                 *readAction;
+    HIDExport                *hidExport;
+    const WheelProtocol      *protocol;
+    uint16_t                  vendorID;
+    uint16_t                  productID;
+    uint16_t                  currentRange;
+    uint8_t                   currentAutocenter;
+    uint8_t                   currentGain;
 };
 
 bool MacoswheelsDriver::init() {
@@ -226,6 +234,17 @@ kern_return_t IMPL(MacoswheelsDriver, Start) {
             ivars->protocol->interruptOutEndpoint);
     }
 
+    IOUSBHostPipe *inPipe = NULL;
+    iface->CopyPipe(ivars->protocol->interruptInEndpoint, &inPipe);
+    if (inPipe) {
+        ivars->inPipe = inPipe;
+        Log("interrupt-IN pipe at 0x%02x acquired",
+            ivars->protocol->interruptInEndpoint);
+    } else {
+        Log("failed to acquire interrupt-IN pipe at 0x%02x",
+            ivars->protocol->interruptInEndpoint);
+    }
+
     IOService *hidService = NULL;
     ret = Create(this, "HIDExportProperties", &hidService);
     if (ret == kIOReturnSuccess && hidService) {
@@ -237,13 +256,66 @@ kern_return_t IMPL(MacoswheelsDriver, Start) {
         Log("Create HIDExport failed 0x%x", ret);
     }
 
+    if (ivars->inPipe) {
+        ret = IOBufferMemoryDescriptor::Create(
+            kIOMemoryDirectionIn, kInputBufferSize, 0, &ivars->inBuffer);
+        if (ret == kIOReturnSuccess && ivars->inBuffer) {
+            ret = CreateActionHandleInputCompletion(0, &ivars->readAction);
+            if (ret == kIOReturnSuccess && ivars->readAction) {
+                ret = ivars->inPipe->AsyncIO(
+                    ivars->inBuffer, kInputBufferSize, ivars->readAction, 0);
+                if (ret != kIOReturnSuccess) {
+                    Log("first AsyncIO kickoff failed 0x%x", ret);
+                }
+            } else {
+                Log("CreateActionHandleInputCompletion failed 0x%x", ret);
+            }
+        } else {
+            Log("IOBufferMemoryDescriptor::Create (input) failed 0x%x", ret);
+        }
+    }
+
     RegisterService();
     return kIOReturnSuccess;
+}
+
+void IMPL(MacoswheelsDriver, HandleInputCompletion) {
+    if (!ivars || !ivars->inPipe || !ivars->inBuffer) return;
+
+    if (status == kIOReturnSuccess && actualByteCount > 0 &&
+        ivars->protocol && ivars->protocol->translateInputReport &&
+        ivars->hidExport)
+    {
+        uint64_t addr = 0, mappedLen = 0;
+        ivars->inBuffer->Map(0, 0, 0, 0, &addr, &mappedLen);
+        if (addr && mappedLen >= actualByteCount) {
+            uint8_t translated[64];
+            size_t n = ivars->protocol->translateInputReport(
+                (const uint8_t *)(uintptr_t)addr, actualByteCount,
+                translated, sizeof(translated));
+            if (n > 0) {
+                ivars->hidExport->EmitInputReport(translated, n);
+            }
+        }
+    }
+
+    // Re-arm the read.
+    if (ivars->inPipe && ivars->readAction) {
+        kern_return_t rearm = ivars->inPipe->AsyncIO(
+            ivars->inBuffer, kInputBufferSize, ivars->readAction, 0);
+        if (rearm != kIOReturnSuccess && rearm != kIOReturnAborted) {
+            Log("AsyncIO re-arm failed 0x%x", rearm);
+        }
+    }
 }
 
 kern_return_t IMPL(MacoswheelsDriver, Stop) {
     Log("Stop");
     if (ivars) {
+        if (ivars->inPipe) ivars->inPipe->Abort(0, kIOReturnAborted, NULL);
+        OSSafeReleaseNULL(ivars->readAction);
+        OSSafeReleaseNULL(ivars->inBuffer);
+        OSSafeReleaseNULL(ivars->inPipe);
         OSSafeReleaseNULL(ivars->hidExport);
         OSSafeReleaseNULL(ivars->outPipe);
         if (ivars->interface) {

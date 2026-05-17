@@ -1,12 +1,16 @@
 #include <os/log.h>
 #include <stdint.h>
+#include <string.h>
 
 #include <DriverKit/IOLib.h>
+#include <DriverKit/IOBufferMemoryDescriptor.h>
+#include <DriverKit/IOMemoryDescriptor.h>
 #include <DriverKit/OSData.h>
 #include <DriverKit/OSDictionary.h>
 #include <DriverKit/OSNumber.h>
 #include <DriverKit/OSString.h>
 #include <HIDDriverKit/IOUserHIDDevice.h>
+#include <HIDDriverKit/IOHIDDevice.h>
 
 #include "HIDExport.h"
 
@@ -91,4 +95,25 @@ OSDictionary *HIDExport::newDeviceDescription() {
 
 OSData *HIDExport::newReportDescriptor() {
     return OSData::withBytes(kReportDescriptor, sizeof(kReportDescriptor));
+}
+
+kern_return_t HIDExport::EmitInputReport(const uint8_t *bytes, size_t length) {
+    if (!bytes || length == 0) return kIOReturnBadArgument;
+    IOBufferMemoryDescriptor *desc = NULL;
+    kern_return_t ret = IOBufferMemoryDescriptor::Create(
+        kIOMemoryDirectionIn, length, 0, &desc);
+    if (ret != kIOReturnSuccess || !desc) return ret;
+
+    uint64_t addr = 0;
+    uint64_t mappedLen = 0;
+    desc->Map(0, 0, 0, 0, &addr, &mappedLen);
+    if (addr && mappedLen >= length) {
+        memcpy((void *)(uintptr_t)addr, bytes, length);
+    }
+    desc->SetLength(length);
+
+    ret = handleReport(0 /*timestamp; OS fills in*/, desc,
+                       (uint32_t)length, kIOHIDReportTypeInput, 0);
+    OSSafeReleaseNULL(desc);
+    return ret;
 }

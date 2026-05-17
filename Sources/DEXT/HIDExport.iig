@@ -12,6 +12,11 @@ public:
     virtual kern_return_t Stop(IOService *provider) override;
     virtual OSDictionary *newDeviceDescription() override;
     virtual OSData *newReportDescriptor() override;
+
+    // Driver pushes already-translated input bytes through this; we wrap
+    // them in an IOMemoryDescriptor and dispatch via handleReport.
+    virtual kern_return_t EmitInputReport(
+        const uint8_t *bytes, size_t length) LOCALONLY;
 };
 
 #endif /* HIDExport_h */

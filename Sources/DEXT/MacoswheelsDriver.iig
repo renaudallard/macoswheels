@@ -4,6 +4,7 @@
 #include <Availability.h>
 #include <DriverKit/IOService.iig>
 #include <USBDriverKit/IOUSBHostInterface.iig>
+#include <USBDriverKit/IOUSBHostPipe.iig>
 
 class MacoswheelsDriver : public IOService {
 public:
@@ -18,6 +19,14 @@ public:
     virtual kern_return_t SetAutocenter(uint8_t percent) LOCALONLY;
     virtual kern_return_t SetGain(uint8_t percent) LOCALONLY;
     virtual kern_return_t ResetWheel() LOCALONLY;
+
+    // Completion for the interrupt-IN async read. TYPE annotation tells iig to
+    // generate the OSAction signature shim matching IOUSBHostPipe::CompleteAsyncIO.
+    virtual void HandleInputCompletion(
+        OSAction      *action,
+        IOReturn       status,
+        uint32_t       actualByteCount,
+        uint64_t       completionTimestamp) TYPE(IOUSBHostPipe::CompleteAsyncIO);
 };
 
 #endif /* MacoswheelsDriver_h */
