@@ -16,6 +16,7 @@
 
 #include "MacoswheelsDriver.h"
 #include "MacoswheelsUserClient.h"
+#include "HIDExport.h"
 #include "TMSettings.hpp"
 
 #define Log(fmt, ...) \
@@ -24,6 +25,7 @@
 struct MacoswheelsDriver_IVars {
     IOUSBHostInterface *interface;
     IOUSBHostPipe      *outPipe;
+    HIDExport          *hidExport;
     uint16_t            vendorID;
     uint16_t            productID;
     uint16_t            maxRangeDegrees;
@@ -114,6 +116,17 @@ kern_return_t IMPL(MacoswheelsDriver, Start) {
             TMSettings::kInterruptOutEndpoint);
     }
 
+    IOService *hidService = NULL;
+    ret = Create(this, "HIDExportProperties", &hidService);
+    if (ret == kIOReturnSuccess && hidService) {
+        ivars->hidExport = OSDynamicCast(HIDExport, hidService);
+        if (ivars->hidExport) {
+            Log("HIDExport instantiated");
+        }
+    } else {
+        Log("Create HIDExport failed 0x%x", ret);
+    }
+
     RegisterService();
     return kIOReturnSuccess;
 }
@@ -121,6 +134,7 @@ kern_return_t IMPL(MacoswheelsDriver, Start) {
 kern_return_t IMPL(MacoswheelsDriver, Stop) {
     Log("Stop");
     if (ivars) {
+        OSSafeReleaseNULL(ivars->hidExport);
         OSSafeReleaseNULL(ivars->outPipe);
         if (ivars->interface) {
             ivars->interface->Close(this, 0);
