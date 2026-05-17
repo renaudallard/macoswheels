@@ -73,7 +73,6 @@ kern_return_t IMPL(MacoswheelsDriver, Start) {
             ivars->vendorID = USBToHost16(desc->idVendor);
             ivars->productID = USBToHost16(desc->idProduct);
             Log("matched VID:PID %04x:%04x", ivars->vendorID, ivars->productID);
-            IOUSBHostFreeDescriptor(desc);
         }
         OSSafeReleaseNULL(dev);
     }
@@ -107,25 +106,25 @@ kern_return_t IMPL(MacoswheelsDriver, NewUserClient) {
     return kIOReturnSuccess;
 }
 
-kern_return_t MacoswheelsDriver::SetRotationRange_Impl(uint16_t degrees) {
+kern_return_t MacoswheelsDriver::SetRotationRange(uint16_t degrees) {
     Log("SetRotationRange %u", degrees);
     ivars->currentRange = degrees;
     return kIOReturnSuccess;
 }
 
-kern_return_t MacoswheelsDriver::SetAutocenter_Impl(uint8_t percent) {
+kern_return_t MacoswheelsDriver::SetAutocenter(uint8_t percent) {
     Log("SetAutocenter %u%%", percent);
     ivars->currentAutocenter = percent;
     return kIOReturnSuccess;
 }
 
-kern_return_t MacoswheelsDriver::SetGain_Impl(uint8_t percent) {
+kern_return_t MacoswheelsDriver::SetGain(uint8_t percent) {
     Log("SetGain %u%%", percent);
     ivars->currentGain = percent;
     return kIOReturnSuccess;
 }
 
-kern_return_t MacoswheelsDriver::ResetWheel_Impl() {
+kern_return_t MacoswheelsDriver::ResetWheel() {
     Log("Reset");
     return kIOReturnSuccess;
 }
