@@ -57,10 +57,11 @@ jobs:
                          -scheme MacoswheelsContainer \
                          -configuration Release \
                          -destination 'platform=macOS' \
+                         DRIVERKIT_DEPLOYMENT_TARGET=23.0 \
                          build
           else
               xcodebuild -project Macoswheels.xcodeproj \
-                         -scheme MacoswheelsContainer \
+                         -scheme Macoswheels \
                          -configuration Release \
                          -destination 'platform=macOS' \
                          CODE_SIGNING_ALLOWED=NO \
@@ -68,7 +69,9 @@ jobs:
                          CODE_SIGNING_REQUIRED=NO \
                          CODE_SIGN_ENTITLEMENTS="" \
                          ENTITLEMENTS_REQUIRED=NO \
+                         DRIVERKIT_DEPLOYMENT_TARGET=23.0 \
                          build
+              echo "::notice::DEXT compile skipped on CI (SwiftPM products don't build for DriverKit). Set CERT_P12_BASE64 to enable the full build."
           fi
 
       - name: Package artifact
