@@ -17,6 +17,10 @@
 .Cm gain Ar percent Op Ar wheel
 .Nm
 .Cm reset Op Ar wheel
+.Nm
+.Cm restore
+.Nm
+.Cm dump-effect Ar kind Op Fl -wheel Ar name Op Fl -slot Ar N Op Fl -magnitude Ar M Op Fl -duration Ar ms
 .Sh DESCRIPTION
 The
 .Nm
@@ -61,6 +65,32 @@ See
 Set global force-feedback gain as a percentage 0..100.
 .It Cm reset
 Re-run the wheel's initialize sequence.
+.It Cm restore
+Reapply the saved rotation range, autocenter and gain from
+.Pa ~/Library/Preferences/it.allard.macoswheels.plist .
+Invoked at login by the matching LaunchAgent the container app installs.
+.It Cm dump-effect Ar kind
+Print the USB packet bytes that
+.Nm
+would emit for a force-feedback effect of the given kind, without sending
+anything. Kinds:
+.Cm constant ,
+.Cm sine , square , triangle , sawUp , sawDown ,
+.Cm spring , damper , friction , inertia ,
+.Cm ramp .
+Useful for protocol debugging against
+.Xr usbmon 4
+captures from a Linux box driving the same wheel under
+.Nm hid-tmff2
+or
+.Nm new-lg4ff .
+The
+.Fl -wheel
+flag selects which encoder to use (default
+.Cm T150 ;
+also accepts
+.Cm T300 , T128 , G29
+and the family aliases). Other flags supply effect parameters.
 .El
 .Sh EXIT STATUS
 .Ex -std
