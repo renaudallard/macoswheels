@@ -8,7 +8,7 @@ options:
 
 settings:
   base:
-    SWIFT_VERSION: "6.0"
+    SWIFT_VERSION: "5"
     CODE_SIGN_STYLE: Manual
     DEVELOPMENT_TEAM: "$(DEVELOPMENT_TEAM)"
     ENABLE_HARDENED_RUNTIME: "YES"
