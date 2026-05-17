@@ -5,7 +5,7 @@
                               |
                               | IOHIDManager + PID 1.0 output reports
                               v
-+---------------- macoswheels DEXT (Swift, DriverKit) -----------------+
++--------------- macoswheels DEXT (IIG / C++, DriverKit) --------------+
 |                                                                     |
 |  (d) ConfigPlane      MacoswheelsUserClient : IOUserClient          |
 |  (c) HID re-export    HIDExport             : IOUserHIDDevice       |

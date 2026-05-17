@@ -104,7 +104,7 @@ Settings persist to `~/Library/Preferences/it.allard.macoswheels.plist` and are 
                               |
                               | IOHIDManager + PID 1.0 output reports
                               v
-+---------------- macoswheels DEXT (Swift, DriverKit) -----------------+
++--------------- macoswheels DEXT (IIG / C++, DriverKit) --------------+
 |                                                                     |
 |  (d) ConfigPlane      MacoswheelsUserClient : IOUserClient          |
 |  (c) HID re-export    HIDExport             : IOUserHIDDevice       |
@@ -117,7 +117,7 @@ Settings persist to `~/Library/Preferences/it.allard.macoswheels.plist` and are 
                        [ Thrustmaster / Logitech wheel ]
 ```
 
-Strict downward dependency between the four layers. The device-driver layer is pure Swift with no IOKit dependency, so the protocol encoders are unit-tested on Linux in ~0.2 s. Full architectural detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+Strict downward dependency between the four layers. The Swift reference implementation of the device-driver layer (under `Sources/Drivers/`) has no IOKit dependency and is unit-tested on Linux in ~0.2 s; the IIG DEXT ports each wheel from there into its own C++ `WheelProtocol` vtable. Full architectural detail: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ---
 
