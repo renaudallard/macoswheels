@@ -26,6 +26,7 @@ targets:
         excludes:
           - "Info.plist"
           - "*.entitlements"
+          - "*.md"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: it.allard.macoswheels.dext
