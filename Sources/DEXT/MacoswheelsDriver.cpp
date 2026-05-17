@@ -403,3 +403,26 @@ kern_return_t MacoswheelsDriver::ResetWheel() {
     SetRotationRange(ivars->currentRange);
     return kIOReturnSuccess;
 }
+
+kern_return_t MacoswheelsDriver::SubmitEffect(const NormalizedEffect *effect) {
+    if (!effect || !ivars || !ivars->protocol || !ivars->protocol->encodeEffect) {
+        return kIOReturnUnsupported;
+    }
+    EffectPackets pkts = {};
+    if (!ivars->protocol->encodeEffect(effect, &pkts) || pkts.count == 0) {
+        Log("encodeEffect refused kind=%u slot=%u", effect->kind, effect->slot);
+        return kIOReturnUnsupported;
+    }
+    size_t offset = 0;
+    for (uint8_t i = 0; i < pkts.count; ++i) {
+        uint8_t len = pkts.lengths[i];
+        kern_return_t ret = sendBytes(ivars->outPipe, pkts.bytes + offset, len);
+        if (ret != kIOReturnSuccess) {
+            Log("SubmitEffect: packet %u/%u sendBytes failed 0x%x",
+                i, pkts.count, ret);
+            return ret;
+        }
+        offset += len;
+    }
+    return kIOReturnSuccess;
+}
