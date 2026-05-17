@@ -69,7 +69,7 @@ jobs:
                          -scheme MacoswheelsContainer \
                          -configuration Release \
                          -destination 'platform=macOS' \
-                         DRIVERKIT_DEPLOYMENT_TARGET=24.0 \
+                         DRIVERKIT_DEPLOYMENT_TARGET=25.0 \
                          build
           else
               xcodebuild -project Macoswheels.xcodeproj \
@@ -81,7 +81,7 @@ jobs:
                          CODE_SIGNING_REQUIRED=NO \
                          CODE_SIGN_ENTITLEMENTS="" \
                          ENTITLEMENTS_REQUIRED=NO \
-                         DRIVERKIT_DEPLOYMENT_TARGET=24.0 \
+                         DRIVERKIT_DEPLOYMENT_TARGET=25.0 \
                          build
           fi
 
