@@ -3,7 +3,7 @@ options:
   bundleIdPrefix: it.allard.macoswheels
   deploymentTarget:
     macOS: "14.0"
-    driverKit: "23.0"
+    driverKit: "24.0"
   createIntermediateGroups: true
 
 settings:
