@@ -34,7 +34,7 @@ Thrustmaster ships no macOS driver. Apple removed kext-based force feedback year
 Games that use `IOHIDManager` — that's CrossOver/Wine plus any well-behaved native title — see a standard force-feedback joystick with zero per-app glue.
 
 > [!IMPORTANT]
-> **Status:** phases 0–7 of the roadmap landed. T150 is the reference implementation with the full FFB pipeline. T300/TX/TS-XW/TS-PC/T248/T-GT have complete FFB encoders (constant, ramp, every periodic, spring, damper, friction, inertia). Logitech G25/G27/G29/G920/G923/DFP cover constant + condition effects. 108 unit tests pass on Linux on every push. The DEXT itself only compiles on CI when signing secrets are configured.
+> **Status:** phases 0–7 of the roadmap landed. T150 is the reference implementation with the full FFB pipeline. T300/TX/TS-XW/TS-PC/T248/T-GT have complete FFB encoders (constant, ramp, every periodic, spring, damper, friction, inertia). Logitech G25/G27/G29/G920/G923/DFP cover constant + condition effects. The 14 wheel modules share one `GenericWheelDriver<Q: WheelQuirks>` generic — adding a new wheel is a single quirks struct + typealias. 108 unit tests pass on Linux on every push. The DEXT itself **does not currently compile in CI** because Apple's installed Xcode 26.3 doesn't ship a Swift standard library for DriverKit; the protocol encoders + CLI compile on macOS as usual. See [`docs/DEV-MODE-SETUP.md`](docs/DEV-MODE-SETUP.md#4-why-ci-doesnt-compile-the-dext) for the full story.
 
 ---
 
