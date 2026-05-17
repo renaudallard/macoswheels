@@ -51,8 +51,8 @@ targets:
       - path: Sources/Container
         excludes:
           - "Resources/**"
-      - path: Sources/Container/Resources
-        type: folder
+      - path: Sources/Container/Resources/Assets.xcassets
+      - path: Sources/Container/Resources/it.allard.macoswheels.restore.plist
         buildPhase: resources
     dependencies:
       - target: MacoswheelsDEXT

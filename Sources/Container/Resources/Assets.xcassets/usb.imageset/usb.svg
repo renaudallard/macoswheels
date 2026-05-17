@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="12" y1="3" x2="12" y2="20"></line>
+    <polyline points="9.5,5.5 12,3 14.5,5.5"></polyline>
+    <circle cx="12" cy="20" r="1" fill="currentColor" stroke="none"></circle>
+    <path d="M12 10 L8 13 V15"></path>
+    <circle cx="8" cy="15" r="1.5"></circle>
+    <path d="M12 13 L16 11 V9.5"></path>
+    <rect x="14.5" y="7" width="3" height="2.5"></rect></svg>

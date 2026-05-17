@@ -21,7 +21,7 @@ struct ContentView: View {
             DEXTPanel(model: model)
                 .tabItem { Label("Driver", systemImage: "puzzlepiece.extension") }
             ConfigPanel(model: model)
-                .tabItem { Label("Wheel", systemImage: "steeringwheel") }
+                .tabItem { Label("Wheel", image: "wheel") }
         }
         .padding(20)
     }
