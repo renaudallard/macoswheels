@@ -59,7 +59,7 @@ jobs:
             echo "No signing cert configured; build will be unsigned (dev-only)."
           fi
 
-      - name: Build CLI (validation; DEXT not compilable on stock GitHub macOS runners)
+      - name: Build CLI + DEXT (IIG / C++)
         env:
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
           CERT_P12_BASE64: ${{ secrets.CERT_P12_BASE64 }}
@@ -74,11 +74,16 @@ jobs:
                      CODE_SIGN_ENTITLEMENTS="" \
                      ENTITLEMENTS_REQUIRED=NO \
                      build
-          if [ -n "${CERT_P12_BASE64:-}" ]; then
-              echo "::warning::Even with signing secrets, the DEXT compile is skipped"
-              echo "::warning::because Apple's installed Xcode (26.3 on this runner) doesn't ship a"
-              echo "::warning::Swift stdlib for DriverKit yet. See docs/DEV-MODE-SETUP.md."
-          fi
+          xcodebuild -project Macoswheels.xcodeproj \
+                     -scheme MacoswheelsDEXT \
+                     -configuration Release \
+                     -destination 'platform=macOS' \
+                     CODE_SIGNING_ALLOWED=NO \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGN_ENTITLEMENTS="" \
+                     ENTITLEMENTS_REQUIRED=NO \
+                     build
 
       - name: Package artifact
         env:

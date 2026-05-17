@@ -22,13 +22,10 @@ targets:
     type: driver-extension
     platform: macOS
     sources:
-      - path: Sources/WheelProtocol
-      - path: Sources/WheelRegistry
-      - path: Sources/Drivers
-      - path: Sources/HIDDescriptors
-      - path: Sources/FFBNormalizer
-      - path: Sources/ConfigPlane
       - path: Sources/DEXT
+        excludes:
+          - "Info.plist"
+          - "*.entitlements"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: it.allard.macoswheels.dext
@@ -36,6 +33,8 @@ targets:
         CODE_SIGN_ENTITLEMENTS: Sources/DEXT/Macoswheels.entitlements
         SDKROOT: driverkit
         SUPPORTED_PLATFORMS: driverkit
+        CLANG_CXX_LANGUAGE_STANDARD: "gnu++17"
+        CLANG_CXX_LIBRARY: "libc++"
 
   MacoswheelsContainer:
     type: application
