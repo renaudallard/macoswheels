@@ -2,9 +2,15 @@
 
 import DriverKit
 import USBDriverKit
+#if canImport(WheelProtocol)
 import WheelProtocol
+#endif
+#if canImport(WheelRegistry)
 import WheelRegistry
+#endif
+#if canImport(Drivers)
 import Drivers
+#endif
 import os.log
 
 final class MacoswheelsDriver: IOService {

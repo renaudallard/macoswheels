@@ -1,10 +1,18 @@
 #if canImport(DriverKit)
 
 import DriverKit
+#if canImport(WheelProtocol)
 import WheelProtocol
+#endif
+#if canImport(HIDDescriptors)
 import HIDDescriptors
+#endif
+#if canImport(FFBNormalizer)
 import FFBNormalizer
+#endif
+#if canImport(Drivers)
 import Drivers
+#endif
 import os.log
 
 final class WheelSession: DeviceDriverDelegate, @unchecked Sendable {

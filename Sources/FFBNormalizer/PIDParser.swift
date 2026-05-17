@@ -1,6 +1,10 @@
 import Foundation
+#if canImport(HIDDescriptors)
 import HIDDescriptors
+#endif
+#if canImport(WheelProtocol)
 import WheelProtocol
+#endif
 
 public enum PIDParseError: Error, Sendable, Hashable {
     case unknownReportID(UInt8)

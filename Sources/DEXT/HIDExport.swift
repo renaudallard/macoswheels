@@ -2,8 +2,12 @@
 
 import DriverKit
 import HIDDriverKit
+#if canImport(HIDDescriptors)
 import HIDDescriptors
+#endif
+#if canImport(WheelProtocol)
 import WheelProtocol
+#endif
 import os.log
 
 final class HIDExport: IOUserHIDDevice {

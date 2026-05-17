@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(WheelProtocol)
 import WheelProtocol
+#endif
 
 public enum GShifterQuirks: ShifterQuirks {
     public static let displayName = "Logitech Driving Force Shifter"

@@ -2,7 +2,9 @@
 
 import DriverKit
 import USBDriverKit
+#if canImport(WheelProtocol)
 import WheelProtocol
+#endif
 import os.log
 
 final class IOKitUSBTransport: USBTransport, @unchecked Sendable {

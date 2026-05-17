@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(WheelProtocol)
 import WheelProtocol
+#endif
 
 public final class GenericWheelDriver<Q: WheelQuirks>: DeviceDriver, @unchecked Sendable {
     public static var displayName: String { Q.displayName }

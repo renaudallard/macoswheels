@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(WheelRegistry)
 import WheelRegistry
+#endif
 
 enum List {
     static func run(args: [String]) {

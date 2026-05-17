@@ -1,7 +1,13 @@
 import Foundation
+#if canImport(ConfigPlane)
 import ConfigPlane
+#endif
+#if canImport(WheelProtocol)
 import WheelProtocol
+#endif
+#if canImport(WheelRegistry)
 import WheelRegistry
+#endif
 
 let argv = CommandLine.arguments
 guard argv.count >= 2 else {

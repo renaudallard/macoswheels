@@ -1,9 +1,15 @@
 #if canImport(DriverKit)
 
 import DriverKit
+#if canImport(ConfigPlane)
 import ConfigPlane
+#endif
+#if canImport(WheelProtocol)
 import WheelProtocol
+#endif
+#if canImport(Drivers)
 import Drivers
+#endif
 import os.log
 
 final class MacoswheelsUserClient: IOUserClient {

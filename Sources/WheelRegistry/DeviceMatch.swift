@@ -1,4 +1,6 @@
+#if canImport(WheelProtocol)
 import WheelProtocol
+#endif
 
 public struct DeviceMatchEntry: Sendable, Hashable {
     public let identity: WheelIdentity

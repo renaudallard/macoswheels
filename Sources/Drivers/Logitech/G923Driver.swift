@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(WheelProtocol)
 import WheelProtocol
+#endif
 
 public enum G923Quirks: WheelQuirks {
     public static let displayName = "Logitech G923"

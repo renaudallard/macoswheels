@@ -1,4 +1,6 @@
+#if canImport(WheelProtocol)
 import WheelProtocol
+#endif
 
 public enum T300FFBEncoder {
 

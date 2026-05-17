@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(ConfigPlane)
 import ConfigPlane
+#endif
 
 enum WheelClientError: Error {
     case dextNotLoaded

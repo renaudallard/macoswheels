@@ -22,20 +22,13 @@ targets:
     type: driver-extension
     platform: macOS
     sources:
+      - path: Sources/WheelProtocol
+      - path: Sources/WheelRegistry
+      - path: Sources/Drivers
+      - path: Sources/HIDDescriptors
+      - path: Sources/FFBNormalizer
+      - path: Sources/ConfigPlane
       - path: Sources/DEXT
-    dependencies:
-      - package: Macoswheels
-        product: WheelProtocol
-      - package: Macoswheels
-        product: WheelRegistry
-      - package: Macoswheels
-        product: Drivers
-      - package: Macoswheels
-        product: HIDDescriptors
-      - package: Macoswheels
-        product: FFBNormalizer
-      - package: Macoswheels
-        product: ConfigPlane
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: it.allard.macoswheels.dext

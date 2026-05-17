@@ -1,4 +1,6 @@
+#if canImport(WheelProtocol)
 import WheelProtocol
+#endif
 
 public enum PIDReportID: UInt8 {
     case input            = 0x01

@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(WheelProtocol)
 import WheelProtocol
+#endif
 
 public enum TH8AShifterQuirks: ShifterQuirks {
     public static let displayName = "Thrustmaster TH8A shifter"

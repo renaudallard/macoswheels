@@ -1,5 +1,7 @@
 import Foundation
+#if canImport(WheelProtocol)
 import WheelProtocol
+#endif
 
 public enum TSXWQuirks: WheelQuirks {
     public static let displayName = "Thrustmaster TS-XW"
