@@ -85,13 +85,42 @@ final class MacoswheelsDriver: IOService {
     private func makeDriver(for entry: DeviceMatchEntry, transport: any USBTransport) -> any DeviceDriver {
         let dummy = WheelSession.NullDelegate()
         switch entry.driverName {
-        case "T150": return T150Driver(transport: transport, delegate: dummy)
-        default:     return T150Driver(transport: transport, delegate: dummy)
+        case "T150":  return T150Driver(transport: transport, delegate: dummy)
+        case "T300":  return T300Driver(transport: transport, delegate: dummy)
+        case "TX":    return TXDriver(transport: transport, delegate: dummy)
+        case "TSXW":  return TSXWDriver(transport: transport, delegate: dummy)
+        case "TSPC":  return TSPCDriver(transport: transport, delegate: dummy)
+        case "T248":  return T248Driver(transport: transport, delegate: dummy)
+        case "T128":  return T128Driver(transport: transport, delegate: dummy)
+        case "TGT":   return TGTDriver(transport: transport, delegate: dummy)
+        case "TH8A":  return TH8AShifterDriver(transport: transport, delegate: dummy)
+        case "G25":   return G25Driver(transport: transport, delegate: dummy)
+        case "G27":   return G27Driver(transport: transport, delegate: dummy)
+        case "G29":   return G29Driver(transport: transport, delegate: dummy)
+        case "G920":  return G920Driver(transport: transport, delegate: dummy)
+        case "G923",
+             "G923PS",
+             "G923Xbox": return G923Driver(transport: transport, delegate: dummy)
+        case "GShifter": return GShifterDriver(transport: transport, delegate: dummy)
+        default:
+            os_log("unknown driver name %{public}@ -- defaulting to T150",
+                   log: log, type: .error, entry.driverName)
+            return T150Driver(transport: transport, delegate: dummy)
         }
     }
 
     private func locateInterruptPipes(_ interface: IOUSBHostInterface) -> (IOUSBHostPipe, IOUSBHostPipe)? {
-        nil
+        let preferredIn:  UInt8 = (interface.device?.vendorID == 0x046D) ? 0x81 : 0x81
+        let preferredOut: UInt8 = (interface.device?.vendorID == 0x046D) ? 0x01 : 0x02
+        guard let inPipe  = interface.copyPipe(forAddress: preferredIn) else {
+            os_log("interrupt-IN pipe 0x%02x not found", log: log, type: .error, preferredIn)
+            return nil
+        }
+        guard let outPipe = interface.copyPipe(forAddress: preferredOut) else {
+            os_log("interrupt-OUT pipe 0x%02x not found", log: log, type: .error, preferredOut)
+            return nil
+        }
+        return (inPipe, outPipe)
     }
 }
 

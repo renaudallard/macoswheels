@@ -16,12 +16,16 @@ public protocol WheelQuirks {
     static func setGainPackets(percent: UInt8) throws -> [USBPacket]
     static func encode(_ effect: NormalizedEffect) throws -> [USBPacket]
     static func stopEffectPacket(slot: UInt8) throws -> USBPacket
+
+    static func parseInputReport(raw: [UInt8]) -> [UInt8]?
 }
 
 extension WheelQuirks {
     public static var defaultAutocenterPercent: UInt8 { 0 }
     public static var defaultGainPercent: UInt8 { 75 }
     public static var hardwareSlotCount: UInt8 { 16 }
+
+    public static func parseInputReport(raw: [UInt8]) -> [UInt8]? { nil }
 }
 
 public protocol ShifterQuirks {
