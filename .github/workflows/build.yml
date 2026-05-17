@@ -50,17 +50,39 @@ jobs:
       - name: Build container + DEXT + CLI
         env:
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
+          CERT_P12_BASE64: ${{ secrets.CERT_P12_BASE64 }}
         run: |
-          xcodebuild -project Macoswheels.xcodeproj \
-                     -scheme MacoswheelsContainer \
-                     -configuration Release \
-                     -destination 'platform=macOS' \
-                     build
+          if [ -n "${CERT_P12_BASE64:-}" ]; then
+              xcodebuild -project Macoswheels.xcodeproj \
+                         -scheme MacoswheelsContainer \
+                         -configuration Release \
+                         -destination 'platform=macOS' \
+                         build
+          else
+              xcodebuild -project Macoswheels.xcodeproj \
+                         -scheme MacoswheelsContainer \
+                         -configuration Release \
+                         -destination 'platform=macOS' \
+                         CODE_SIGNING_ALLOWED=NO \
+                         CODE_SIGN_IDENTITY="" \
+                         CODE_SIGNING_REQUIRED=NO \
+                         CODE_SIGN_ENTITLEMENTS="" \
+                         ENTITLEMENTS_REQUIRED=NO \
+                         build
+          fi
 
       - name: Package artifact
-        run: bash ci/sign-and-package.sh MacoswheelsContainer Release
+        env:
+          CERT_P12_BASE64: ${{ secrets.CERT_P12_BASE64 }}
+        run: |
+          if [ -n "${CERT_P12_BASE64:-}" ]; then
+              bash ci/sign-and-package.sh MacoswheelsContainer Release
+          else
+              echo "No signing cert; skipping artifact packaging."
+          fi
 
       - name: Upload
+        if: ${{ hashFiles('build/macoswheels-*.zip') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: macoswheels-${{ github.sha }}
