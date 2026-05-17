@@ -250,6 +250,7 @@ kern_return_t IMPL(MacoswheelsDriver, Start) {
     if (ret == kIOReturnSuccess && hidService) {
         ivars->hidExport = OSDynamicCast(HIDExport, hidService);
         if (ivars->hidExport) {
+            ivars->hidExport->SetParentDriver(this);
             Log("HIDExport instantiated");
         }
     } else {

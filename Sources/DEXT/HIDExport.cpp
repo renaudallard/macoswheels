@@ -13,8 +13,13 @@
 #include <HIDDriverKit/IOHIDDevice.h>
 
 #include "HIDExport.h"
+#include "MacoswheelsDriver.h"
 
 #define Log(fmt, ...) os_log(OS_LOG_DEFAULT, "HIDExport: " fmt, ##__VA_ARGS__)
+
+struct HIDExport_IVars {
+    MacoswheelsDriver *driver;
+};
 
 // Minimal HID joystick descriptor for the re-exposed wheel.
 // 16-bit signed X axis (steering), 16-bit Y axis (throttle), 16-bit Rz (brake),
@@ -54,10 +59,14 @@ static const uint8_t kReportDescriptor[] = {
 };
 
 bool HIDExport::init() {
-    return super::init();
+    bool ok = super::init();
+    if (!ok) return false;
+    ivars = IONewZero(HIDExport_IVars, 1);
+    return ivars != NULL;
 }
 
 void HIDExport::free() {
+    IOSafeDeleteNULL(ivars, HIDExport_IVars, 1);
     super::free();
 }
 
@@ -116,4 +125,73 @@ kern_return_t HIDExport::EmitInputReport(const uint8_t *bytes, size_t length) {
                        (uint32_t)length, kIOHIDReportTypeInput, 0);
     OSSafeReleaseNULL(desc);
     return ret;
+}
+
+void HIDExport::SetParentDriver(IOService *driver) {
+    ivars->driver = OSDynamicCast(MacoswheelsDriver, driver);
+}
+
+// PID 1.0 output report IDs (Physical Interface Device class).
+enum PIDReportID : uint8_t {
+    PIDSetEffect       = 0x02,
+    PIDSetEnvelope     = 0x03,
+    PIDSetCondition    = 0x04,
+    PIDSetPeriodic     = 0x05,
+    PIDSetConstant     = 0x06,
+    PIDSetRamp         = 0x07,
+    PIDSetCustom       = 0x08,
+    PIDEffectOperation = 0x0A,
+    PIDBlockFree       = 0x0B,
+    PIDDeviceControl   = 0x0C,
+    PIDDeviceGain      = 0x0D,
+    PIDCreateNewEffect = 0x11,
+};
+
+kern_return_t HIDExport::setReport(
+    IOMemoryDescriptor *report,
+    IOHIDReportType     reportType,
+    IOOptionBits        options,
+    uint32_t            completionTimeoutMs,
+    OSAction           *action)
+{
+    if (!report) return kIOReturnBadArgument;
+
+    uint64_t addr = 0, length = 0;
+    report->Map(0, 0, 0, 0, &addr, &length);
+    if (!addr || length < 1) return kIOReturnBadArgument;
+
+    const uint8_t *bytes = (const uint8_t *)(uintptr_t)addr;
+    uint8_t reportID = bytes[0];
+
+    switch (reportID) {
+    case PIDDeviceGain: {
+        // Single-byte payload: gain in [0, 255].
+        if (length < 2) return kIOReturnBadArgument;
+        uint8_t pct = (uint16_t)bytes[1] * 100 / 255;
+        if (ivars->driver) {
+            return ivars->driver->SetGain(pct);
+        }
+        return kIOReturnNotReady;
+    }
+    case PIDSetEffect:
+    case PIDSetEnvelope:
+    case PIDSetCondition:
+    case PIDSetPeriodic:
+    case PIDSetConstant:
+    case PIDSetRamp:
+    case PIDSetCustom:
+    case PIDEffectOperation:
+    case PIDBlockFree:
+    case PIDDeviceControl:
+    case PIDCreateNewEffect:
+        // Full FFB effect upload still TODO; the wheel-protocol encoder
+        // function pointers + state need to land. Log + drop for now so we
+        // don't ::error{} on every game that exercises FFB.
+        Log("setReport: PID 0x%02x (%llu bytes) -- effect upload not wired yet",
+            reportID, length);
+        return kIOReturnSuccess;
+    default:
+        Log("setReport: unknown report ID 0x%02x", reportID);
+        return kIOReturnUnsupported;
+    }
 }

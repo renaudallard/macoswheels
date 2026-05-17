@@ -17,6 +17,19 @@ public:
     // them in an IOMemoryDescriptor and dispatch via handleReport.
     virtual kern_return_t EmitInputReport(
         const uint8_t *bytes, size_t length) LOCALONLY;
+
+    // Driver hands us itself after Create() so we can call back into it
+    // (e.g. SetGain) when a PID output report arrives via setReport.
+    virtual void SetParentDriver(IOService *driver) LOCALONLY;
+
+    // Override IOUserHIDDevice::setReport so PID Set-Effect / Device Gain /
+    // etc. output reports from games reach the wheel.
+    virtual kern_return_t setReport(
+        IOMemoryDescriptor *report,
+        IOHIDReportType     reportType,
+        IOOptionBits        options,
+        uint32_t            completionTimeoutMs,
+        OSAction           *action) LOCALONLY;
 };
 
 #endif /* HIDExport_h */
