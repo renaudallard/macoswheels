@@ -57,43 +57,6 @@ kern_return_t IMPL(MacoswheelsUserClient, Stop) {
     return Stop(provider, SUPERDISPATCH);
 }
 
-kern_return_t MacoswheelsUserClient::ExternalMethod(
-    uint64_t selector,
-    IOUserClientMethodArguments *arguments,
-    const IOUserClientMethodDispatch *dispatch,
-    OSObject *target,
-    void *reference)
-{
-    MacoswheelsDriver *driver = ivars->driver;
-    if (driver == NULL) return kIOReturnNotReady;
-
-    switch (selector) {
-    case kSelectorSetRotationRange: {
-        if (arguments->scalarInputCount < 1) return kIOReturnBadArgument;
-        uint16_t degrees = (uint16_t) arguments->scalarInput[0];
-        return driver->SetRotationRange(degrees);
-    }
-    case kSelectorSetAutocenter: {
-        if (arguments->scalarInputCount < 1) return kIOReturnBadArgument;
-        uint8_t pct = (uint8_t) arguments->scalarInput[0];
-        return driver->SetAutocenter(pct);
-    }
-    case kSelectorSetGain: {
-        if (arguments->scalarInputCount < 1) return kIOReturnBadArgument;
-        uint8_t pct = (uint8_t) arguments->scalarInput[0];
-        return driver->SetGain(pct);
-    }
-    case kSelectorReset:
-        return driver->ResetWheel();
-
-    case kSelectorGetDeviceList:
-    case kSelectorGetInfo:
-    case kSelectorGetCapabilities:
-    case kSelectorVendorCommand:
-        return kIOReturnUnsupported;
-
-    default:
-        Log("unknown selector %llu", selector);
-        return kIOReturnBadArgument;
-    }
-}
+// ExternalMethod dispatch is not yet wired -- the IIG signature for the
+// override is what we're still working out. Until it lands, every selector
+// returns kIOReturnUnsupported (which is the IOUserClient base default).
