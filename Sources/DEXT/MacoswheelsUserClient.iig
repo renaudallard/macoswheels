@@ -4,7 +4,7 @@
 #include <Availability.h>
 #include <DriverKit/IOUserClient.iig>
 
-#include "MacoswheelsDriver.h"
+#include "MacoswheelsDriver.iig"
 
 class MacoswheelsUserClient : public IOUserClient {
 public:
