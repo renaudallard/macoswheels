@@ -22,7 +22,7 @@ let package = Package(
         .target(name: "HIDDescriptors", dependencies: ["WheelProtocol"]),
         .target(name: "FFBNormalizer",  dependencies: ["WheelProtocol", "HIDDescriptors"]),
         .target(name: "ConfigPlane",    dependencies: ["WheelProtocol"]),
-        .executableTarget(name: "CLI",  dependencies: ["WheelProtocol", "WheelRegistry", "ConfigPlane"]),
+        .executableTarget(name: "CLI",  dependencies: ["WheelProtocol", "WheelRegistry", "ConfigPlane", "Drivers"]),
 
         .testTarget(name: "WheelProtocolTests",
                     dependencies: ["WheelProtocol", "WheelRegistry", "Drivers"]),

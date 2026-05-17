@@ -15,6 +15,8 @@ enum Output {
           gain        <0..100> [<wheel>]
           reset       [<wheel>]
           restore                       reapply saved range/autocenter/gain
+          dump-effect <kind> [--wheel <name>] [--slot N] [--magnitude M] [--duration ms]
+                                        print the USB bytes for an effect (no hardware needed)
 
         flags:
           -h, --help     show this help
