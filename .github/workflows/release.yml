@@ -57,7 +57,13 @@ jobs:
       - name: Build container + DEXT + CLI
         env:
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
+          CERT_P12_BASE64: ${{ secrets.CERT_P12_BASE64 }}
         run: |
+          if [ -z "${CERT_P12_BASE64:-}" ]; then
+              echo "::error::release.yml requires CERT_P12_BASE64, CERT_P12_PWD and DEVELOPMENT_TEAM repository secrets."
+              echo "::error::Without them, DEXT signing fails and no release artifact can be produced."
+              exit 1
+          fi
           xcodebuild -project Macoswheels.xcodeproj \
                      -scheme MacoswheelsContainer \
                      -configuration Release \
