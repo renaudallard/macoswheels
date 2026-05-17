@@ -18,6 +18,7 @@
 #include "MacoswheelsUserClient.h"
 #include "HIDExport.h"
 #include "TMSettings.hpp"
+#include "TMBootSwitch.hpp"
 
 #define Log(fmt, ...) \
     os_log(OS_LOG_DEFAULT, "MacoswheelsDriver: " fmt, ##__VA_ARGS__)
@@ -72,6 +73,69 @@ static kern_return_t sendBytes(IOUSBHostPipe *pipe,
     return ret;
 }
 
+static bool readBootMode(IOService *self) {
+    OSDictionary *props = NULL;
+    self->CopyProperties(&props);
+    if (!props) return false;
+    OSObject *modeObj = props->getObject("WheelMode");
+    OSString *mode = OSDynamicCast(OSString, modeObj);
+    bool isBoot = mode && mode->isEqualTo("boot");
+    OSSafeReleaseNULL(props);
+    return isBoot;
+}
+
+static kern_return_t runBootShim(IOUSBHostInterface *iface, IOService *self) {
+    uint8_t queryBuffer[16] = {0};
+    IOUSBDeviceRequest queryReq = {
+        .bmRequestType = 0xC1,
+        .bRequest      = 73,
+        .wValue        = 0,
+        .wIndex        = 0,
+        .wLength       = 16,
+    };
+    uint16_t bytesTransferred = 0;
+    kern_return_t ret = iface->DeviceRequest(self, queryReq, queryBuffer,
+                                             sizeof(queryBuffer),
+                                             &bytesTransferred, 1000);
+    if (ret != kIOReturnSuccess || bytesTransferred < 8) {
+        os_log(OS_LOG_DEFAULT,
+               "MacoswheelsDriver: boot model query failed 0x%x (%u bytes)",
+               ret, bytesTransferred);
+        return ret != kIOReturnSuccess ? ret : kIOReturnError;
+    }
+
+    uint8_t model = 0, attachment = 0;
+    if (!TMBootSwitch::parseModelQuery(queryBuffer, bytesTransferred,
+                                       &model, &attachment)) {
+        return kIOReturnUnsupported;
+    }
+    uint16_t switchValue = TMBootSwitch::lookupSwitchValue(model, attachment);
+    if (switchValue == 0) {
+        os_log(OS_LOG_DEFAULT,
+               "MacoswheelsDriver: no switch for model %u attachment %u",
+               model, attachment);
+        return kIOReturnUnsupported;
+    }
+    os_log(OS_LOG_DEFAULT,
+           "MacoswheelsDriver: detected %s, mode-switch 0x%04x",
+           TMBootSwitch::lookupName(model, attachment), switchValue);
+
+    IOUSBDeviceRequest switchReq = {
+        .bmRequestType = 0x41,
+        .bRequest      = 83,
+        .wValue        = switchValue,
+        .wIndex        = 0,
+        .wLength       = 0,
+    };
+    uint16_t outBytes = 0;
+    ret = iface->DeviceRequest(self, switchReq, NULL, 0, &outBytes, 1000);
+    if (ret != kIOReturnSuccess) {
+        os_log(OS_LOG_DEFAULT,
+               "MacoswheelsDriver: mode switch failed 0x%x", ret);
+    }
+    return ret;
+}
+
 kern_return_t IMPL(MacoswheelsDriver, Start) {
     kern_return_t ret = Start(provider, SUPERDISPATCH);
     if (ret != kIOReturnSuccess) return ret;
@@ -92,6 +156,18 @@ kern_return_t IMPL(MacoswheelsDriver, Start) {
         return ret;
     }
     ivars->interface = iface;
+
+    if (readBootMode(this)) {
+        Log("matched boot personality; running model-query + mode-switch");
+        ret = runBootShim(iface, this);
+        if (ret != kIOReturnSuccess) {
+            Log("boot shim failed 0x%x", ret);
+        }
+        iface->Close(this, 0);
+        ivars->interface = NULL;
+        Stop(provider, SUPERDISPATCH);
+        return ret;
+    }
 
     IOUSBHostDevice *dev = NULL;
     iface->CopyDevice(&dev);
