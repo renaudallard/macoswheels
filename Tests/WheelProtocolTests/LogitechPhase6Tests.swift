@@ -40,8 +40,13 @@ final class LogitechPhase6Tests: XCTestCase {
         let t = MockUSBTransport()
         let d = G25Driver(transport: t, delegate: NoopDelegate())
         try d.initialize()
-        guard case .interruptOut(_, let bytes) = t.sentPackets()[0] else { return XCTFail() }
-        XCTAssertEqual(bytes[0], 0xF8)
-        XCTAssertEqual(bytes[1], 0x81)
+        let sent = t.sentPackets()
+        let rangePacket = sent.first { p in
+            if case .interruptOut(_, let bytes) = p {
+                return bytes.count >= 2 && bytes[0] == 0xF8 && bytes[1] == 0x81
+            }
+            return false
+        }
+        XCTAssertNotNil(rangePacket, "range packet not found in init sequence")
     }
 }

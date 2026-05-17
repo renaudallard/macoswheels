@@ -1,13 +1,12 @@
 import Foundation
 import WheelProtocol
 
-public final class G29Driver: DeviceDriver, @unchecked Sendable {
-
+public enum G29Quirks: WheelQuirks {
     public static let displayName = "Logitech G29"
 
     public static let supportedIDs: [WheelIdentity] = [
         WheelIdentity(vendorID: LGOpcode.logitechVID, productID: LGPID.g29,
-                      model: G29Driver.displayName, role: .wheelBase),
+                      model: displayName, role: .wheelBase),
     ]
 
     public static let bootIdentity: WheelIdentity? =
@@ -32,66 +31,24 @@ public final class G29Driver: DeviceDriver, @unchecked Sendable {
         supportsGain: false
     )
 
-    private let transport: any USBTransport
-    private weak var delegate: (any DeviceDriverDelegate)?
-    private let lock = NSLock()
-    private var currentRangeDegrees: UInt16 = 900
-    private var currentAutocenter: UInt8 = 0
+    public static let defaultRangeDegrees: UInt16 = 900
+    public static let hardwareSlotCount: UInt8 = 4
 
-    public init(transport: any USBTransport, delegate: any DeviceDriverDelegate) {
-        self.transport = transport
-        self.delegate = delegate
+    public static func setRotationRangePackets(degrees: UInt16) throws -> [USBPacket] {
+        [LGSettings.setRotationRangePacket(degrees: degrees)]
     }
-
-    public func probe() throws -> ProbeResult {
-        ProbeResult(identity: Self.supportedIDs[0], firmwareVersion: nil)
+    public static func setAutocenterPackets(percent: UInt8) throws -> [USBPacket] {
+        LGSettings.setAutocenterPackets(percent: percent)
     }
-    public func claim() throws {}
-
-    public func initialize() throws {
-        try transport.send(LGSettings.setRotationRangePacket(degrees: currentRangeDegrees))
-        for p in LGSettings.setAutocenterPackets(percent: currentAutocenter) {
-            try transport.send(p)
-        }
-    }
-
-    public func startReadLoop() throws {}
-    public func teardown() {}
-
-    public func setRotationRange(degrees: UInt16) throws {
-        let caps = Self.capabilities
-        guard (caps.rangeMinDegrees...caps.rangeMaxDegrees).contains(degrees) else {
-            throw DriverError.rangeOutOfBounds(requested: degrees,
-                                               min: caps.rangeMinDegrees,
-                                               max: caps.rangeMaxDegrees)
-        }
-        try transport.send(LGSettings.setRotationRangePacket(degrees: degrees))
-        lock.lock(); currentRangeDegrees = degrees; lock.unlock()
-    }
-
-    public func setAutocenter(strength: UInt8) throws {
-        let pct = min(strength, 100)
-        for p in LGSettings.setAutocenterPackets(percent: pct) {
-            try transport.send(p)
-        }
-        lock.lock(); currentAutocenter = pct; lock.unlock()
-    }
-
-    public func setGain(_ gain: UInt8) throws {
+    public static func setGainPackets(percent: UInt8) throws -> [USBPacket] {
         throw DriverError.effectNotSupported(.constant)
     }
-
-    public func encode(_ effect: NormalizedEffect) throws -> [USBPacket] {
+    public static func encode(_ effect: NormalizedEffect) throws -> [USBPacket] {
         try LGFFBEncoder.encode(effect)
     }
-
-    public func stopEffect(slot: UInt8) throws {
-        try transport.send(LGFFBEncoder.stopPacket(hardwareSlot: LGFFBEncoder.pidSlotToHardware(slot)))
-    }
-
-    public func stopAllEffects() throws {
-        for slot: UInt8 in 0..<4 {
-            try? transport.send(LGFFBEncoder.stopPacket(hardwareSlot: slot))
-        }
+    public static func stopEffectPacket(slot: UInt8) throws -> USBPacket {
+        LGFFBEncoder.stopPacket(hardwareSlot: LGFFBEncoder.pidSlotToHardware(slot))
     }
 }
+
+public typealias G29Driver = GenericWheelDriver<G29Quirks>

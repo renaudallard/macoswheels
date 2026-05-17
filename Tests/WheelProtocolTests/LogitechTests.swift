@@ -79,8 +79,11 @@ final class G29DriverTests: XCTestCase {
         try d.initialize()
         let sent = t.sentPackets()
         XCTAssertGreaterThanOrEqual(sent.count, 2)
-        guard case .interruptOut(_, let first) = sent[0] else { return XCTFail() }
-        XCTAssertEqual(first[1], 0x81)
+        let rangePacket = sent.first { p in
+            if case .interruptOut(_, let bytes) = p { return bytes.count >= 2 && bytes[1] == 0x81 }
+            return false
+        }
+        XCTAssertNotNil(rangePacket, "range packet not found in init sequence")
     }
 
     func testRangeBelowMinThrows() {
