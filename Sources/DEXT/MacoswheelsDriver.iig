@@ -20,6 +20,12 @@ public:
     virtual kern_return_t SetGain(uint8_t percent) LOCALONLY;
     virtual kern_return_t ResetWheel() LOCALONLY;
 
+    // Submit one already-parsed FFB effect. Looks up the active
+    // WheelProtocol's encodeEffect, then pushes each packet via
+    // interrupt-OUT.
+    virtual kern_return_t SubmitEffect(
+        const struct NormalizedEffect *effect) LOCALONLY;
+
     // Completion for the interrupt-IN async read. TYPE annotation tells iig to
     // generate the OSAction signature shim matching IOUSBHostPipe::CompleteAsyncIO.
     virtual void HandleInputCompletion(

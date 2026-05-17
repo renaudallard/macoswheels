@@ -4,6 +4,59 @@
 #include <stdint.h>
 #include <stddef.h>
 
+// A wheel-agnostic representation of one FFB effect. The PID parser fills this
+// from incoming HID output reports, the protocol's encodeEffect builds the
+// wire packets, the driver pushes the packets out the interrupt-OUT pipe.
+struct NormalizedEffect {
+    enum Kind : uint8_t {
+        KindUnknown = 0,
+        KindConstant,
+        KindRamp,
+        KindSinePeriodic,
+        KindSquarePeriodic,
+        KindTrianglePeriodic,
+        KindSawUpPeriodic,
+        KindSawDownPeriodic,
+        KindSpring,
+        KindDamper,
+        KindFriction,
+        KindInertia,
+        KindStartEffect,
+        KindStopEffect,
+    };
+
+    Kind     kind;
+    uint8_t  slot;
+    uint32_t durationMs;
+    int16_t  magnitude;
+    int16_t  rampStart;
+    int16_t  rampEnd;
+    int16_t  offset;
+    uint16_t phase;
+    uint32_t period;
+    int16_t  positiveCoeff;
+    int16_t  negativeCoeff;
+    int16_t  positiveSat;
+    int16_t  negativeSat;
+    uint16_t deadBand;
+    int16_t  centerOffset;
+    int16_t  attackLevel;
+    uint32_t attackTime;
+    int16_t  fadeLevel;
+    uint32_t fadeTime;
+    bool     hasEnvelope;
+    uint8_t  repeats;
+};
+
+// Output buffer for an encoded effect. Each Wheel's encodeEffect concatenates
+// its packets back-to-back in `bytes` and records per-packet lengths in
+// `lengths`. Driver iterates and sends each.
+struct EffectPackets {
+    uint8_t bytes[256];
+    uint8_t lengths[8];
+    uint8_t count;
+};
+
 // One vtable per wheel model. Adding a new wheel = define one of these
 // structs and register it in WheelProtocol.cpp's kRegistry table.
 //
@@ -34,6 +87,13 @@ struct WheelProtocol {
     // NULL means parser is not yet implemented; driver will not call back.
     size_t (*translateInputReport)(const uint8_t *raw, size_t rawLen,
                                    uint8_t *out, size_t outCap);
+
+    // Encode one NormalizedEffect into a concatenated packet sequence in
+    // `out`. Sets out->count to the number of packets, out->lengths[i] to
+    // each one's byte count, and writes the bytes back-to-back in
+    // out->bytes. Returns true on success; false if the wheel doesn't
+    // support this effect kind (driver should silently drop).
+    bool (*encodeEffect)(const NormalizedEffect *effect, EffectPackets *out);
 };
 
 // Find a registered wheel by USB VID/PID. Returns NULL if unsupported.

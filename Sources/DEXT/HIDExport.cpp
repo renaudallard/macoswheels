@@ -163,32 +163,67 @@ kern_return_t HIDExport::setReport(
     const uint8_t *bytes = (const uint8_t *)(uintptr_t)addr;
     uint8_t reportID = bytes[0];
 
+    if (!ivars->driver) return kIOReturnNotReady;
+
+    NormalizedEffect eff = {};
     switch (reportID) {
     case PIDDeviceGain: {
-        // Single-byte payload: gain in [0, 255].
         if (length < 2) return kIOReturnBadArgument;
         uint8_t pct = (uint16_t)bytes[1] * 100 / 255;
-        if (ivars->driver) {
-            return ivars->driver->SetGain(pct);
-        }
-        return kIOReturnNotReady;
+        return ivars->driver->SetGain(pct);
+    }
+    case PIDSetConstant: {
+        // payload: [report_id, slot, level_signed_byte]
+        if (length < 3) return kIOReturnBadArgument;
+        eff.kind = NormalizedEffect::KindConstant;
+        eff.slot = bytes[1];
+        eff.magnitude = (int16_t)((int8_t)bytes[2]) * 256;
+        return ivars->driver->SubmitEffect(&eff);
+    }
+    case PIDSetPeriodic: {
+        // [report_id, slot, magnitude_lo, magnitude_hi, period_lo, period_hi]
+        // We don't know which kind of periodic without a prior Set Effect;
+        // default to sine which is the common case.
+        if (length < 6) return kIOReturnBadArgument;
+        eff.kind     = NormalizedEffect::KindSinePeriodic;
+        eff.slot     = bytes[1];
+        eff.magnitude = (int16_t)(bytes[2] | (bytes[3] << 8));
+        eff.period   = (uint32_t)(bytes[4] | (bytes[5] << 8));
+        return ivars->driver->SubmitEffect(&eff);
+    }
+    case PIDSetCondition: {
+        // [report_id, slot, pos_coeff, neg_coeff, pos_sat, neg_sat, deadband, center]
+        if (length < 8) return kIOReturnBadArgument;
+        eff.kind         = NormalizedEffect::KindSpring;
+        eff.slot         = bytes[1];
+        eff.positiveCoeff = (int16_t)((int8_t)bytes[2]) * 256;
+        eff.negativeCoeff = (int16_t)((int8_t)bytes[3]) * 256;
+        eff.positiveSat   = (int16_t)bytes[4] * 256;
+        eff.negativeSat   = (int16_t)bytes[5] * 256;
+        eff.deadBand      = (uint16_t)bytes[6] * 256;
+        eff.centerOffset  = (int16_t)((int8_t)bytes[7]) * 256;
+        return ivars->driver->SubmitEffect(&eff);
+    }
+    case PIDEffectOperation: {
+        // [report_id, slot, operation]
+        // operation: 1 = start, 2 = start solo, 3 = stop
+        if (length < 3) return kIOReturnBadArgument;
+        eff.kind = (bytes[2] == 3) ? NormalizedEffect::KindStopEffect
+                                   : NormalizedEffect::KindStartEffect;
+        eff.slot = bytes[1];
+        eff.repeats = 1;
+        return ivars->driver->SubmitEffect(&eff);
     }
     case PIDSetEffect:
     case PIDSetEnvelope:
-    case PIDSetCondition:
-    case PIDSetPeriodic:
-    case PIDSetConstant:
     case PIDSetRamp:
     case PIDSetCustom:
-    case PIDEffectOperation:
     case PIDBlockFree:
     case PIDDeviceControl:
     case PIDCreateNewEffect:
-        // Full FFB effect upload still TODO; the wheel-protocol encoder
-        // function pointers + state need to land. Log + drop for now so we
-        // don't ::error{} on every game that exercises FFB.
-        Log("setReport: PID 0x%02x (%llu bytes) -- effect upload not wired yet",
-            reportID, length);
+        // Slot allocation / envelope state / ramp / custom: handled in a
+        // follow-up commit when per-slot effect state lands. Accept silently
+        // for now so games don't see errors mid-stream.
         return kIOReturnSuccess;
     default:
         Log("setReport: unknown report ID 0x%02x", reportID);
