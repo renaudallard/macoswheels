@@ -160,7 +160,8 @@ Sources/
   HIDDescriptors/       PID 1.0 output-report block + descriptor builder
   FFBNormalizer/        PID Set-Effect parser + Synthesizer (effect downgrade)
   ConfigPlane/          IOUserClient selectors + struct ABI
-  DEXT/                 DriverKit System Extension (Swift)
+  DEXT/                 DriverKit System Extension (IIG / C++)
+  DEXT-swift-attic/     superseded Swift DEXT, kept for reference
   Container/            SwiftUI container app (DEXT activator + sliders GUI)
   CLI/                  `macoswheels` binary
 Tests/                  Linux-runnable XCTest suites (125 tests)
