@@ -68,7 +68,7 @@ jobs:
                      -scheme MacoswheelsContainer \
                      -configuration Release \
                      -destination 'platform=macOS' \
-                     DRIVERKIT_DEPLOYMENT_TARGET=24.0 \
+                     DRIVERKIT_DEPLOYMENT_TARGET=25.0 \
                      build
 
       - name: Package artifact
