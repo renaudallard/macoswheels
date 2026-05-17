@@ -27,7 +27,10 @@ rm -rf "$ARTIFACT_DIR"
 mkdir -p "$ARTIFACT_DIR"
 cp -R "$ARCHIVE/Products/Applications/MacoswheelsContainer.app" "$ARTIFACT_DIR/"
 cp -R Tools/dev-load.sh "$ARTIFACT_DIR/"
+cp -R Tools/uninstall.sh "$ARTIFACT_DIR/" 2>/dev/null || true
 cp -R man "$ARTIFACT_DIR/"
 
 (cd "$BUILD_DIR" && zip -r9 "$(basename "$ZIP")" "$(basename "$ARTIFACT_DIR")")
+(cd "$BUILD_DIR" && shasum -a 256 "$(basename "$ZIP")" > "$(basename "$ZIP").sha256")
 echo "$ZIP"
+echo "$ZIP.sha256"

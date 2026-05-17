@@ -79,13 +79,16 @@ jobs:
         run: |
           ZIP="$(ls build/macoswheels-*.zip | head -1)"
           echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+          echo "sha=${ZIP}.sha256" >> "$GITHUB_OUTPUT"
           echo "name=$(basename "$ZIP")" >> "$GITHUB_OUTPUT"
 
       - name: Upload CI artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.locate.outputs.name }}
-          path: ${{ steps.locate.outputs.zip }}
+          path: |
+            ${{ steps.locate.outputs.zip }}
+            ${{ steps.locate.outputs.sha }}
           if-no-files-found: error
 
       - name: Create or update GitHub Release
@@ -93,7 +96,9 @@ jobs:
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           name: ${{ github.event.inputs.tag || github.ref_name }}
-          files: ${{ steps.locate.outputs.zip }}
+          files: |
+            ${{ steps.locate.outputs.zip }}
+            ${{ steps.locate.outputs.sha }}
           fail_on_unmatched_files: true
           draft: false
           prerelease: false
@@ -101,8 +106,14 @@ jobs:
           body: |
             macoswheels build for ${{ github.event.inputs.tag || github.ref_name }}, built on `macos-latest` with the Xcode that runner ships with.
 
+            ## Verify
+
+            ```sh
+            shasum -a 256 -c macoswheels-${{ github.event.inputs.tag || github.ref_name }}.zip.sha256
+            ```
+
             ## Install (dev-mode Mac required)
-            1. Download `${{ steps.locate.outputs.name }}` and unzip.
+            1. Download `${{ steps.locate.outputs.name }}` (and the `.sha256` if you want to verify) and unzip.
             2. Run `Tools/dev-load.sh` from the unzipped directory.
             3. Approve the system extension in **System Settings > Privacy & Security**.
 
