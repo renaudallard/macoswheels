@@ -47,11 +47,11 @@ systemextensionsctl developer
 
 Should print `Developer mode is on`.
 
-## 4. Why CI doesn't compile the DEXT
+## 4. Why the DEXT is IIG / C++, not Swift
 
-The GitHub Actions `macos-latest` runner currently ships Xcode 26.3 with the
-DriverKit 25.2 SDK, but Apple has not yet shipped a Swift standard library for
-DriverKit in any installed Xcode. Every `swift-frontend` invocation against an
+The GitHub Actions `macos-latest` runner ships Xcode 26.3 with the DriverKit
+25.2 SDK, but Apple has not shipped a Swift standard library for DriverKit on
+any installed Xcode. Every `swift-frontend` invocation against an
 `arm64-apple-driverkit*` target fails with:
 
 ```
@@ -61,17 +61,19 @@ error: Unable to find module dependency: 'DriverKit'
 error: Unable to find module dependency: 'os'
 ```
 
-This is a known limitation: Swift DriverKit support has been "preview-quality"
-since Xcode 13 (2021), and the stdlib for newer DriverKit deployment targets
-hasn't caught up. Most production DEXTs in the wild (Karabiner-DriverKit,
-SoftRAID, etc.) are still written in IIG / Objective-C++.
+Swift DriverKit support has been "preview-quality" since Xcode 13 (2021) and
+the stdlib for newer DriverKit deployment targets has never caught up. Most
+production DEXTs in the wild (Karabiner-DriverKit, SoftRAID, etc.) are written
+in IIG / Objective-C++ for the same reason.
 
-Until Apple ships a stdlib (or until we accept rewriting the DEXT in IIG),
-`build.yml` builds only the `Macoswheels` (CLI) scheme on macOS to validate
-the macOS-side Swift surface. The DEXT code itself stays in the repo and can
-be compiled on a Mac with whatever future Xcode does support Swift DriverKit;
-the Linux unit-test suite covers the protocol encoders for all 14 wheels in
-the meantime.
+The project's response: the DEXT under `Sources/DEXT/` is now IIG (`.iig`)
+plus plain C++ (`.cpp` / `.hpp`) and compiles cleanly in CI on every push.
+The original Swift sources are kept under `Sources/DEXT-swift-attic/` for
+reference. The Swift protocol library (`Sources/WheelProtocol`,
+`Sources/Drivers/*`, `Sources/FFBNormalizer`, ...) is unchanged and stays the
+Linux-unit-tested source of truth for byte-level encoder behaviour; each
+wheel is ported from Swift into a C++ `WheelProtocol` vtable as it lands in
+the DEXT.
 
 ## 5. Notes on signing
 
@@ -83,5 +85,4 @@ setup above is required.
 
 If you have your own DriverKit entitlement grant, replace the team in
 `project.yml` (`DEVELOPMENT_TEAM`) and re-run the CI workflow; the resulting
-artifact will load on any Mac with SIP in default posture (subject to the
-DEXT compile issue in section 4 above).
+artifact will load on any Mac with SIP in default posture.
