@@ -34,7 +34,7 @@ Thrustmaster ships no macOS driver. Apple removed kext-based force feedback year
 Games that use `IOHIDManager` — that's CrossOver/Wine plus any well-behaved native title — see a standard force-feedback joystick with zero per-app glue.
 
 > [!IMPORTANT]
-> **Status:** the Swift protocol library is complete for 21 wheels and shifters and is tested on Linux on every push (125 unit tests covering encoders, settings packets and the PID parser). The DriverKit DEXT is being rewritten in IIG / C++ because Apple still ships no Swift standard library for DriverKit on any installed Xcode. **T150, the T300 family (T300/TX/TS-XW/TS-PC/T248/T-GT), the Logitech family (DFP/DFGT/G25/G27/G29/G920/G923 PC/PS/Xbox) and the standalone shifters (Thrustmaster TH8A, Logitech Driving Force Shifter) are wired into the IIG DEXT today. T128 is recognised and exposes steering, pedals and buttons; FFB is unimplemented because the wheel's protocol isn't publicly documented**; T128 still needs its distinct protocol ported. Logitech wheels in "Driving Force compat" mode (shared PID `046D:C294`) are auto-switched to their native firmware PID at boot, using the wheel's `bcdDevice` to disambiguate (table cribbed from Linux `new-lg4ff`). The DEXT now reads each wheel's native HID Report Descriptor over USB at Start() and re-publishes it with the PID 1.0 output-report block spliced in, so steering / pedals / buttons / hat go through unchanged for every wheel that exposes a sensible descriptor. T150's input parser is landed; the other wheels' interrupt-IN byte layouts are next. The device tables below describe the Swift library's encoder coverage, not what the IIG DEXT exposes to macOS today. See [`docs/DEV-MODE-SETUP.md`](docs/DEV-MODE-SETUP.md) for the rationale and setup.
+> **Status:** the IIG / C++ DEXT covers every device in the tables below — T-series (T150, T300, TX, TS-XW, TS-PC, T248, T-GT) with full FFB, Logitech (DFP, DFGT, G25, G27, G29, G920, G923 PC/PS/Xbox) with constant + condition FFB, plus the TH8A and Driving Force shifters. T128 enumerates and forwards its axes/buttons but FFB is unimplemented (wire protocol not publicly documented). Logitech wheels in "Driving Force compat" mode are auto-switched to native firmware mode at boot via the wheel's `bcdDevice` (table cribbed from Linux `new-lg4ff`). Input is dynamic: the driver reads each wheel's HID Report Descriptor over USB and re-publishes it with the PID 1.0 output-report block spliced in, so steering / pedals / buttons / hat pass through unchanged. CI builds the DEXT on `macos-latest` and runs 125 Linux unit tests on every push. The DEXT is IIG / C++ rather than Swift because Apple still ships no Swift standard library for DriverKit on any installed Xcode; see [`docs/DEV-MODE-SETUP.md`](docs/DEV-MODE-SETUP.md).
 
 ---
 
@@ -108,8 +108,8 @@ Settings persist to `~/Library/Preferences/it.allard.macoswheels.plist` and are 
 |                                                                     |
 |  (d) ConfigPlane      MacoswheelsUserClient : IOUserClient          |
 |  (c) HID re-export    HIDExport             : IOUserHIDDevice       |
-|  (b) Device driver    any DeviceDriver       (one per wheel)        |
-|  (a) USB transport    USBTransport over IOUSBHostInterface          |
+|  (b) Device driver    WheelProtocol vtable   (one per wheel)        |
+|  (a) USB transport    IOUSBHostInterface + IOUSBHostPipe            |
 |                                                                     |
 +---------------------------------------------------------------------+
                               |   USB control + interrupt
