@@ -10,6 +10,7 @@ static const ModelEntry kModels[] = {
     {0x02, 0x06, 0x0005, "T300RS"},
     {0x02, 0x09, 0x0005, "T300RS Open Wheel"},
     {0x03, 0x06, 0x0006, "T150RS"},
+    {0x00, 0x09, 0x000B, "T128"},
 };
 
 uint16_t lookupSwitchValue(uint8_t model, uint8_t attachment) {

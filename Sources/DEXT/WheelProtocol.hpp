@@ -132,6 +132,7 @@ extern const WheelProtocol kG920Protocol;
 extern const WheelProtocol kG923PCProtocol;
 extern const WheelProtocol kG923PSProtocol;
 extern const WheelProtocol kG923XboxProtocol;
+extern const WheelProtocol kT128Protocol;
 extern const WheelProtocol kTH8AProtocol;
 extern const WheelProtocol kGShifterProtocol;
 

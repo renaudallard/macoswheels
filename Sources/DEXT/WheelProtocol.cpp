@@ -19,6 +19,7 @@ static const WheelProtocol *kRegistry[] = {
     &kG923PCProtocol,
     &kG923PSProtocol,
     &kG923XboxProtocol,
+    &kT128Protocol,
     &kTH8AProtocol,
     &kGShifterProtocol,
 };
