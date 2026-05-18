@@ -76,6 +76,10 @@ const WheelProtocol NAME = {                                             \
     .setAutocenter          = &LGSettings::setAutocenterPackets,         \
 }
 
+LG_PROTOCOL(kDFPProtocol,
+            "Logitech Driving Force Pro",  LGCommon::kDFPNativePID,      900);
+LG_PROTOCOL(kDFGTProtocol,
+            "Logitech Driving Force GT",   LGCommon::kDFGTNativePID,     900);
 LG_PROTOCOL(kG25Protocol,
             "Logitech G25",                LGCommon::kG25NativePID,      900);
 LG_PROTOCOL(kG27Protocol,

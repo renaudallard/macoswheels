@@ -10,6 +10,8 @@ static const WheelProtocol *kRegistry[] = {
     &kTSPCProtocol,
     &kT248Protocol,
     &kTGTProtocol,
+    &kDFPProtocol,
+    &kDFGTProtocol,
     &kG25Protocol,
     &kG27Protocol,
     &kG29Protocol,

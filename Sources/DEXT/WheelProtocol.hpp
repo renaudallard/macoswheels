@@ -123,6 +123,8 @@ extern const WheelProtocol kTSXWProtocol;
 extern const WheelProtocol kTSPCProtocol;
 extern const WheelProtocol kT248Protocol;
 extern const WheelProtocol kTGTProtocol;
+extern const WheelProtocol kDFPProtocol;
+extern const WheelProtocol kDFGTProtocol;
 extern const WheelProtocol kG25Protocol;
 extern const WheelProtocol kG27Protocol;
 extern const WheelProtocol kG29Protocol;
