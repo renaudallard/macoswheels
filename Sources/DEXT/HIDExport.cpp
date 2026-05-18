@@ -15,6 +15,7 @@
 #include "HIDExport.h"
 #include "MacoswheelsDriver.h"
 #include "WheelProtocol.hpp"
+#include "HIDDescriptor.hpp"
 
 #define Log(fmt, ...) os_log(OS_LOG_DEFAULT, "HIDExport: " fmt, ##__VA_ARGS__)
 
@@ -51,18 +52,13 @@ struct HIDExport_IVars {
     PIDSlot            slots[kPIDSlotCount];
 };
 
-// HID descriptor: joystick input + USB PID 1.0 output reports.
+// Generic joystick fallback descriptor.
 //
-// Input (report ID 1): 16-bit signed X (steering), 16-bit Y (throttle),
-// 16-bit Rz (brake), 16 buttons.
-//
-// Output reports are PID 1.0 (USB Physical Interface Device class). Each
-// report's byte layout matches the parser in setReport below; field usages
-// follow the PID spec so winebus/dinput can map DirectInput effects onto
-// them. Effect block index is 8-bit so the host can address 0..255 slots
-// (the driver caps at kPIDSlotCount = 16).
-static const uint8_t kReportDescriptor[] = {
-    // === Joystick input ===
+// Used by newReportDescriptor only when the driver couldn't read the wheel's
+// own HID Report Descriptor over USB and therefore couldn't pre-merge a real
+// per-wheel descriptor. The PID block is spliced in at runtime so the FFB
+// path still works.
+static const uint8_t kJoystickFallback[] = {
     0x05, 0x01,        // Usage Page (Generic Desktop)
     0x09, 0x04,        // Usage (Joystick)
     0xA1, 0x01,        // Collection (Application)
@@ -87,172 +83,9 @@ static const uint8_t kReportDescriptor[] = {
     0x15, 0x00, 0x25, 0x01,
     0x75, 0x01, 0x95, 0x10,
     0x81, 0x02,
-
-    // === PID 1.0 output reports ===
-    0x05, 0x0F,        //   Usage Page (Physical Interface Device)
-
-    // Set Effect (0x02): [id, slot, type, dur_lo, dur_hi]
-    0x09, 0x21,        //   Usage (Set Effect Report)
-    0xA1, 0x02,        //   Collection (Logical)
-    0x85, 0x02,        //     Report ID 2
-    0x09, 0x22,        //     Effect Block Index
-    0x15, 0x00, 0x26, 0xFF, 0x00,
-    0x75, 0x08, 0x95, 0x01,
-    0x91, 0x02,
-    0x09, 0x25,        //     Effect Type
-    0x91, 0x02,
-    0x09, 0x50,        //     Duration
-    0x27, 0xFF, 0xFF, 0x00, 0x00,
-    0x75, 0x10,
-    0x91, 0x02,
-    0xC0,
-
-    // Set Envelope (0x03): [id, slot, atk_lvl, atk_t, fade_lvl, fade_t]
-    0x09, 0x5A,        //   Usage (Set Envelope Report)
-    0xA1, 0x02,
-    0x85, 0x03,        //     Report ID 3
-    0x09, 0x22,        //     Effect Block Index
-    0x15, 0x00, 0x26, 0xFF, 0x00,
-    0x75, 0x08, 0x95, 0x01,
-    0x91, 0x02,
-    0x09, 0x5B,        //     Attack Level
-    0x15, 0x80, 0x25, 0x7F,
-    0x91, 0x02,
-    0x09, 0x5C,        //     Attack Time
-    0x15, 0x00, 0x27, 0xFF, 0xFF, 0x00, 0x00,
-    0x75, 0x10,
-    0x91, 0x02,
-    0x09, 0x5D,        //     Fade Level
-    0x15, 0x80, 0x25, 0x7F,
-    0x75, 0x08,
-    0x91, 0x02,
-    0x09, 0x5E,        //     Fade Time
-    0x15, 0x00, 0x27, 0xFF, 0xFF, 0x00, 0x00,
-    0x75, 0x10,
-    0x91, 0x02,
-    0xC0,
-
-    // Set Condition (0x04): [id, slot, pos_c, neg_c, pos_s, neg_s, db, ctr]
-    0x09, 0x5F,        //   Usage (Set Condition Report)
-    0xA1, 0x02,
-    0x85, 0x04,        //     Report ID 4
-    0x09, 0x22,        //     Effect Block Index
-    0x15, 0x00, 0x26, 0xFF, 0x00,
-    0x75, 0x08, 0x95, 0x01,
-    0x91, 0x02,
-    0x09, 0x61,        //     Positive Coefficient
-    0x15, 0x80, 0x25, 0x7F,
-    0x91, 0x02,
-    0x09, 0x62,        //     Negative Coefficient
-    0x91, 0x02,
-    0x09, 0x63,        //     Positive Saturation
-    0x15, 0x00, 0x26, 0xFF, 0x00,
-    0x91, 0x02,
-    0x09, 0x64,        //     Negative Saturation
-    0x91, 0x02,
-    0x09, 0x65,        //     Dead Band
-    0x91, 0x02,
-    0x09, 0x60,        //     CP Offset
-    0x15, 0x80, 0x25, 0x7F,
-    0x91, 0x02,
-    0xC0,
-
-    // Set Periodic (0x05): [id, slot, mag(2), off(2), phase(2), period(2)]
-    0x09, 0x68,        //   Usage (Set Periodic Report)
-    0xA1, 0x02,
-    0x85, 0x05,        //     Report ID 5
-    0x09, 0x22,        //     Effect Block Index
-    0x15, 0x00, 0x26, 0xFF, 0x00,
-    0x75, 0x08, 0x95, 0x01,
-    0x91, 0x02,
-    0x09, 0x70,        //     Magnitude
-    0x16, 0x00, 0x80, 0x26, 0xFF, 0x7F,
-    0x75, 0x10,
-    0x91, 0x02,
-    0x09, 0x71,        //     Offset
-    0x91, 0x02,
-    0x09, 0x72,        //     Phase
-    0x15, 0x00, 0x27, 0xFF, 0xFF, 0x00, 0x00,
-    0x91, 0x02,
-    0x09, 0x73,        //     Period
-    0x91, 0x02,
-    0xC0,
-
-    // Set Constant Force (0x06): [id, slot, mag(2)]
-    0x09, 0x74,        //   Usage (Set Constant Force Report)
-    0xA1, 0x02,
-    0x85, 0x06,        //     Report ID 6
-    0x09, 0x22,        //     Effect Block Index
-    0x15, 0x00, 0x26, 0xFF, 0x00,
-    0x75, 0x08, 0x95, 0x01,
-    0x91, 0x02,
-    0x09, 0x70,        //     Magnitude
-    0x16, 0x00, 0x80, 0x26, 0xFF, 0x7F,
-    0x75, 0x10,
-    0x91, 0x02,
-    0xC0,
-
-    // Set Ramp Force (0x07): [id, slot, start, end]
-    0x09, 0x76,        //   Usage (Set Ramp Force Report)
-    0xA1, 0x02,
-    0x85, 0x07,        //     Report ID 7
-    0x09, 0x22,        //     Effect Block Index
-    0x15, 0x00, 0x26, 0xFF, 0x00,
-    0x75, 0x08, 0x95, 0x01,
-    0x91, 0x02,
-    0x09, 0x77,        //     Ramp Start
-    0x15, 0x80, 0x25, 0x7F,
-    0x91, 0x02,
-    0x09, 0x78,        //     Ramp End
-    0x91, 0x02,
-    0xC0,
-
-    // Effect Operation (0x0A): [id, slot, op, loops]
-    0x09, 0x79,        //   Usage (Effect Operation Report)
-    0xA1, 0x02,
-    0x85, 0x0A,        //     Report ID 10
-    0x09, 0x22,        //     Effect Block Index
-    0x15, 0x00, 0x26, 0xFF, 0x00,
-    0x75, 0x08, 0x95, 0x01,
-    0x91, 0x02,
-    0x09, 0x7A,        //     Op (Effect Operation)
-    0x91, 0x02,
-    0x09, 0x7E,        //     Loop Count
-    0x91, 0x02,
-    0xC0,
-
-    // PID Block Free (0x0B): [id, slot]
-    0x09, 0x90,        //   Usage (PID Block Free Report)
-    0xA1, 0x02,
-    0x85, 0x0B,        //     Report ID 11
-    0x09, 0x22,        //     Effect Block Index
-    0x15, 0x00, 0x26, 0xFF, 0x00,
-    0x75, 0x08, 0x95, 0x01,
-    0x91, 0x02,
-    0xC0,
-
-    // PID Device Control (0x0C): [id, command]
-    0x09, 0x95,        //   Usage (PID Device Control Report)
-    0xA1, 0x02,
-    0x85, 0x0C,        //     Report ID 12
-    0x09, 0x96,        //     PID Device Control (raw command byte)
-    0x15, 0x00, 0x26, 0xFF, 0x00,
-    0x75, 0x08, 0x95, 0x01,
-    0x91, 0x02,
-    0xC0,
-
-    // PID Device Gain (0x0D): [id, gain]
-    0x09, 0x7F,        //   Usage (PID Device Gain Report)
-    0xA1, 0x02,
-    0x85, 0x0D,        //     Report ID 13
-    0x09, 0x52,        //     Gain
-    0x15, 0x00, 0x26, 0xFF, 0x00,
-    0x75, 0x08, 0x95, 0x01,
-    0x91, 0x02,
-    0xC0,
-
     0xC0,              // End Collection (Joystick)
 };
+
 
 bool HIDExport::init() {
     bool ok = super::init();
@@ -299,7 +132,35 @@ OSDictionary *HIDExport::newDeviceDescription() {
 }
 
 OSData *HIDExport::newReportDescriptor() {
-    return OSData::withBytes(kReportDescriptor, sizeof(kReportDescriptor));
+    // Preferred path: the driver pre-read the wheel's HID Report Descriptor,
+    // spliced our PID block in, and set "MergedHIDDescriptor" on itself
+    // before instantiating us. We just hand that back.
+    IOService *provider = getProvider();
+    if (provider) {
+        OSObject *obj = NULL;
+        provider->CopyProperty("MergedHIDDescriptor", &obj);
+        if (obj) {
+            OSData *data = OSDynamicCast(OSData, obj);
+            if (data) {
+                Log("newReportDescriptor: using merged descriptor (%u bytes)",
+                    data->getLength());
+                return data;
+            }
+            OSSafeReleaseNULL(obj);
+        }
+    }
+    // Fallback: synthesise a generic joystick + PID descriptor. Used when
+    // the wheel didn't return a usable HID Report Descriptor (rare).
+    uint8_t merged[1024];
+    size_t  n = HIDDescriptor::spliceWithPID(
+        kJoystickFallback, sizeof(kJoystickFallback),
+        merged, sizeof(merged));
+    if (n == 0) {
+        Log("newReportDescriptor: splice failed; returning bare joystick");
+        return OSData::withBytes(kJoystickFallback, sizeof(kJoystickFallback));
+    }
+    Log("newReportDescriptor: using fallback (%zu bytes)", n);
+    return OSData::withBytes(merged, n);
 }
 
 kern_return_t HIDExport::EmitInputReport(const uint8_t *bytes, size_t length) {
@@ -327,20 +188,18 @@ void HIDExport::SetParentDriver(IOService *driver) {
     ivars->driver = OSDynamicCast(MacoswheelsDriver, driver);
 }
 
-// PID 1.0 output report IDs (Physical Interface Device class).
+// PID 1.0 output report IDs — values match HIDDescriptor::kPIDBlock.
 enum PIDReportID : uint8_t {
-    PIDSetEffect       = 0x02,
-    PIDSetEnvelope     = 0x03,
-    PIDSetCondition    = 0x04,
-    PIDSetPeriodic     = 0x05,
-    PIDSetConstant     = 0x06,
-    PIDSetRamp         = 0x07,
-    PIDSetCustom       = 0x08,
-    PIDEffectOperation = 0x0A,
-    PIDBlockFree       = 0x0B,
-    PIDDeviceControl   = 0x0C,
-    PIDDeviceGain      = 0x0D,
-    PIDCreateNewEffect = 0x11,
+    PIDSetEffect       = HIDDescriptor::PIDSetEffect,
+    PIDSetEnvelope     = HIDDescriptor::PIDSetEnvelope,
+    PIDSetCondition    = HIDDescriptor::PIDSetCondition,
+    PIDSetPeriodic     = HIDDescriptor::PIDSetPeriodic,
+    PIDSetConstant     = HIDDescriptor::PIDSetConstant,
+    PIDSetRamp         = HIDDescriptor::PIDSetRamp,
+    PIDEffectOperation = HIDDescriptor::PIDEffectOperation,
+    PIDBlockFree       = HIDDescriptor::PIDBlockFree,
+    PIDDeviceControl   = HIDDescriptor::PIDDeviceControl,
+    PIDDeviceGain      = HIDDescriptor::PIDDeviceGain,
 };
 
 // PID Effect Type enum (USB PID 1.0 spec section 4.2).
@@ -538,9 +397,6 @@ kern_return_t HIDExport::setReport(
         }
         return kIOReturnSuccess;
     }
-    case PIDSetCustom:
-    case PIDCreateNewEffect:
-        return kIOReturnSuccess;
     default:
         Log("setReport: unknown report ID 0x%02x", reportID);
         return kIOReturnUnsupported;

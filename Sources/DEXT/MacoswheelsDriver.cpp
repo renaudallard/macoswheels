@@ -22,6 +22,7 @@
 #include "LGCommon.hpp"
 #include "LGBootSwitch.hpp"
 #include "WheelProtocol.hpp"
+#include "HIDDescriptor.hpp"
 
 #define Log(fmt, ...) \
     os_log(OS_LOG_DEFAULT, "MacoswheelsDriver: " fmt, ##__VA_ARGS__)
@@ -59,6 +60,46 @@ bool MacoswheelsDriver::init() {
 void MacoswheelsDriver::free() {
     IOSafeDeleteNULL(ivars, MacoswheelsDriver_IVars, 1);
     super::free();
+}
+
+// Read the wheel's HID Report Descriptor via standard control transfer.
+// bmRequestType 0x81 = IN, standard, interface; bRequest 0x06 = GET_DESCRIPTOR;
+// wValue = (HID Report Descriptor type 0x22 << 8) | index 0. Returns the byte
+// count placed into out, 0 on failure.
+static size_t readWheelHIDDescriptor(IOUSBHostInterface *iface,
+                                     uint8_t *out, size_t outCap) {
+    if (!iface || !out || outCap == 0) return 0;
+    IOBufferMemoryDescriptor *buf = NULL;
+    kern_return_t ret = IOBufferMemoryDescriptor::Create(
+        kIOMemoryDirectionIn, outCap, 0, &buf);
+    if (ret != kIOReturnSuccess || !buf) return 0;
+
+    uint16_t transferred = 0;
+    ret = iface->DeviceRequest(
+        /*bmRequestType*/ 0x81,
+        /*bRequest*/      0x06,
+        /*wValue*/        0x2200,
+        /*wIndex*/        0,
+        /*wLength*/       (uint16_t)outCap,
+        buf,
+        &transferred,
+        /*completionTimeoutMs*/ 1000);
+
+    size_t n = 0;
+    if (ret == kIOReturnSuccess && transferred > 0) {
+        uint64_t addr = 0, length = 0;
+        buf->Map(0, 0, 0, 0, &addr, &length);
+        if (addr) {
+            size_t copyLen = (size_t)transferred < outCap
+                ? (size_t)transferred : outCap;
+            for (size_t i = 0; i < copyLen; ++i) {
+                out[i] = ((const uint8_t *)(uintptr_t)addr)[i];
+            }
+            n = copyLen;
+        }
+    }
+    OSSafeReleaseNULL(buf);
+    return n;
 }
 
 static kern_return_t sendBytes(IOUSBHostPipe *pipe,
@@ -303,6 +344,39 @@ kern_return_t IMPL(MacoswheelsDriver, Start) {
             ivars->protocol->interruptInEndpoint);
     }
 
+    // Read the wheel's HID Report Descriptor over USB and splice in our PID
+    // output block. The merged bytes get attached as a property on this so
+    // HIDExport::newReportDescriptor returns them when the OS asks. If the
+    // wheel's descriptor doesn't come back or doesn't end with the expected
+    // 0xC0, HIDExport falls back to a generic joystick descriptor.
+    {
+        uint8_t wheelDesc[512];
+        size_t  wheelLen = readWheelHIDDescriptor(iface,
+                                                  wheelDesc, sizeof(wheelDesc));
+        if (wheelLen > 0) {
+            uint8_t merged[1024];
+            size_t  mergedLen = HIDDescriptor::spliceWithPID(
+                wheelDesc, wheelLen, merged, sizeof(merged));
+            if (mergedLen > 0) {
+                OSData       *data  = OSData::withBytes(merged, (uint32_t)mergedLen);
+                OSDictionary *props = OSDictionary::withCapacity(1);
+                if (data && props) {
+                    props->setObject("MergedHIDDescriptor", data);
+                    this->SetProperties(props);
+                    Log("merged HID descriptor: %zu wheel + %zu PID = %zu bytes",
+                        wheelLen, HIDDescriptor::kPIDBlockLen, mergedLen);
+                }
+                OSSafeReleaseNULL(data);
+                OSSafeReleaseNULL(props);
+            } else {
+                Log("HID descriptor splice failed (wheelLen=%zu); using fallback",
+                    wheelLen);
+            }
+        } else {
+            Log("HID descriptor read failed; using fallback");
+        }
+    }
+
     IOService *hidService = NULL;
     ret = Create(this, "HIDExportProperties", &hidService);
     if (ret == kIOReturnSuccess && hidService) {
@@ -352,19 +426,21 @@ kern_return_t IMPL(MacoswheelsDriver, Start) {
 void IMPL(MacoswheelsDriver, HandleInputCompletion) {
     if (!ivars || !ivars->inPipe || !ivars->inBuffer) return;
 
-    if (status == kIOReturnSuccess && actualByteCount > 0 &&
-        ivars->protocol && ivars->protocol->translateInputReport &&
-        ivars->hidExport)
-    {
+    if (status == kIOReturnSuccess && actualByteCount > 0 && ivars->hidExport) {
         uint64_t addr = 0, mappedLen = 0;
         ivars->inBuffer->Map(0, 0, 0, 0, &addr, &mappedLen);
         if (addr && mappedLen >= actualByteCount) {
-            uint8_t translated[64];
-            size_t n = ivars->protocol->translateInputReport(
-                (const uint8_t *)(uintptr_t)addr, actualByteCount,
-                translated, sizeof(translated));
-            if (n > 0) {
-                ivars->hidExport->EmitInputReport(translated, n);
+            const uint8_t *raw = (const uint8_t *)(uintptr_t)addr;
+            if (ivars->protocol && ivars->protocol->translateInputReport) {
+                uint8_t translated[64];
+                size_t n = ivars->protocol->translateInputReport(
+                    raw, actualByteCount, translated, sizeof(translated));
+                if (n > 0) ivars->hidExport->EmitInputReport(translated, n);
+            } else {
+                // Pass-through. The published descriptor is the wheel's own
+                // (with our PID block spliced in), so the OS parses the
+                // wheel's bytes directly.
+                ivars->hidExport->EmitInputReport(raw, (size_t)actualByteCount);
             }
         }
     }
