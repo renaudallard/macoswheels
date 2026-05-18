@@ -123,5 +123,12 @@ extern const WheelProtocol kTSXWProtocol;
 extern const WheelProtocol kTSPCProtocol;
 extern const WheelProtocol kT248Protocol;
 extern const WheelProtocol kTGTProtocol;
+extern const WheelProtocol kG25Protocol;
+extern const WheelProtocol kG27Protocol;
+extern const WheelProtocol kG29Protocol;
+extern const WheelProtocol kG920Protocol;
+extern const WheelProtocol kG923PCProtocol;
+extern const WheelProtocol kG923PSProtocol;
+extern const WheelProtocol kG923XboxProtocol;
 
 #endif /* WheelProtocol_hpp */
