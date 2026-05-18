@@ -19,6 +19,8 @@
 #include "HIDExport.h"
 #include "TMSettings.hpp"
 #include "TMBootSwitch.hpp"
+#include "LGCommon.hpp"
+#include "LGBootSwitch.hpp"
 #include "WheelProtocol.hpp"
 
 #define Log(fmt, ...) \
@@ -92,7 +94,7 @@ static bool readBootMode(IOService *self) {
     return isBoot;
 }
 
-static kern_return_t runBootShim(IOUSBHostInterface *iface) {
+static kern_return_t runThrustmasterBoot(IOUSBHostInterface *iface) {
     // Step 1: model query. Wrap a 16-byte buffer in an
     // IOBufferMemoryDescriptor for the IN data stage.
     IOBufferMemoryDescriptor *queryBuf = NULL;
@@ -159,6 +161,62 @@ static kern_return_t runBootShim(IOUSBHostInterface *iface) {
                "MacoswheelsDriver: mode switch failed 0x%x", ret);
     }
     return ret;
+}
+
+static kern_return_t runLogitechBoot(IOUSBHostInterface *iface,
+                                     uint16_t bcdDevice) {
+    uint8_t mode = LGBootSwitch::lookupNativeMode(bcdDevice);
+    if (mode == 0xFF) {
+        os_log(OS_LOG_DEFAULT,
+               "MacoswheelsDriver: Logitech-Boot bcdDevice 0x%04x not recognised; leaving wheel in compat",
+               bcdDevice);
+        return kIOReturnSuccess;
+    }
+    os_log(OS_LOG_DEFAULT,
+           "MacoswheelsDriver: Logitech bcdDevice 0x%04x -> native mode %u",
+           bcdDevice, mode);
+
+    IOUSBHostPipe *outPipe = NULL;
+    kern_return_t ret = iface->CopyPipe(LGCommon::kInterruptOutEndpoint,
+                                        &outPipe);
+    if (ret != kIOReturnSuccess || !outPipe) {
+        os_log(OS_LOG_DEFAULT,
+               "MacoswheelsDriver: Logitech-Boot CopyPipe 0x%02x failed 0x%x",
+               LGCommon::kInterruptOutEndpoint, ret);
+        return ret;
+    }
+
+    uint8_t revert[7], sw[7];
+    LGBootSwitch::revertOnResetPacket(revert, sizeof(revert));
+    LGBootSwitch::switchPacket(mode, sw, sizeof(sw));
+    (void)sendBytes(outPipe, revert, sizeof(revert));
+    ret = sendBytes(outPipe, sw, sizeof(sw));
+    OSSafeReleaseNULL(outPipe);
+    if (ret != kIOReturnSuccess) {
+        os_log(OS_LOG_DEFAULT,
+               "MacoswheelsDriver: Logitech-Boot switch send failed 0x%x",
+               ret);
+    }
+    return ret;
+}
+
+static kern_return_t runBootShim(IOUSBHostInterface *iface) {
+    IOUSBHostDevice *dev = NULL;
+    iface->CopyDevice(&dev);
+    uint16_t vid = 0;
+    uint16_t bcdDevice = 0;
+    if (dev) {
+        const IOUSBDeviceDescriptor *desc = dev->CopyDeviceDescriptor();
+        if (desc) {
+            vid       = USBToHost16(desc->idVendor);
+            bcdDevice = USBToHost16(desc->bcdDevice);
+        }
+        OSSafeReleaseNULL(dev);
+    }
+    if (vid == LGCommon::kVendorID) {
+        return runLogitechBoot(iface, bcdDevice);
+    }
+    return runThrustmasterBoot(iface);
 }
 
 kern_return_t IMPL(MacoswheelsDriver, Start) {
