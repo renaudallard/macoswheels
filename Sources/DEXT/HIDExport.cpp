@@ -135,18 +135,21 @@ OSData *HIDExport::newReportDescriptor() {
     // Preferred path: the driver pre-read the wheel's HID Report Descriptor,
     // spliced our PID block in, and set "MergedHIDDescriptor" on itself
     // before instantiating us. We just hand that back.
-    IOService *provider = getProvider();
+    IOService *provider = GetProvider();
     if (provider) {
-        OSObject *obj = NULL;
-        provider->CopyProperty("MergedHIDDescriptor", &obj);
-        if (obj) {
-            OSData *data = OSDynamicCast(OSData, obj);
+        OSDictionary *props = NULL;
+        provider->CopyProperties(&props);
+        if (props) {
+            OSObject *obj  = props->getObject("MergedHIDDescriptor");
+            OSData   *data = OSDynamicCast(OSData, obj);
             if (data) {
+                data->retain();
                 Log("newReportDescriptor: using merged descriptor (%u bytes)",
-                    data->getLength());
+                    (unsigned)data->getLength());
+                OSSafeReleaseNULL(props);
                 return data;
             }
-            OSSafeReleaseNULL(obj);
+            OSSafeReleaseNULL(props);
         }
     }
     // Fallback: synthesise a generic joystick + PID descriptor. Used when
