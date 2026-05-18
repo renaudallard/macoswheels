@@ -1,4 +1,4 @@
-.Dd May 17, 2026
+.Dd May 18, 2026
 .Dt MACOSWHEELS 7
 .Os
 .Sh NAME
@@ -14,11 +14,12 @@ racing wheels work on macOS 26 and later.
 The DEXT claims the wheel over USB, sends the proprietary initialization
 sequence
 .Po
-boot-mode to firmware-mode switch on Thrustmaster T-series, native-mode
-register write on Logitech G29 / G920 / G923
-.Pc
-and re-exposes the wheel as a HID device with a USB PID 1.0 force-feedback
-descriptor.
+boot-mode to firmware-mode switch on Thrustmaster T-series, HID++
+.Cm 0xF8/0x09
+native-mode switch on Logitech DFP / DFGT / G25 / G27 / G29
+.Pc ,
+reads the wheel's own HID Report Descriptor and re-publishes it with a
+USB PID 1.0 force-feedback output block spliced in.
 Games that talk to
 .Xr IOHIDManager 7 ,
 including CrossOver / Wine titles, see a standard force-feedback joystick
@@ -26,16 +27,20 @@ with no per-app configuration.
 .Sh SUPPORTED DEVICES
 .Bl -tag -width "Thrustmaster T-GT (firmware mode)"
 .It Thrustmaster T150
-VID 0x044F, boot PID 0xB677, firmware PID 0xB65D.
-.It Thrustmaster T300 RS, TX, TS-XW, T248, T128, T-GT
-T-series family.
+VID 0x044F, boot PID 0xB65D, firmware PID 0xB677. Full FFB encoder.
+.It Thrustmaster T300 RS, TX, TS-XW, TS-PC, T248, T-GT
+T-series family sharing the T300 protocol; full FFB encoder.
+.It Thrustmaster T128
+Recognised; steering / pedals / buttons / hat exposed via the dynamic
+descriptor passthrough. FFB unimplemented (the wheel's wire protocol is
+not publicly documented).
 .It Thrustmaster TH8A shifter
 Stand-alone H-pattern / sequential shifter.
-.It Logitech G25, G27
+.It Logitech DFP, DFGT, G25, G27
 G-series family, behind a boot-to-native PID swap.
-.It Logitech G29, G920, G923
-G-series family, HID++ register-driven native mode.
-.It Logitech G-series shifter
+.It Logitech G29, G920, G923 (PC, PS, Xbox)
+G-series family. G29 also reached via the boot-to-native PID swap.
+.It Logitech Driving Force shifter
 Stand-alone H-pattern shifter.
 .El
 .Sh DISTRIBUTION MODEL
