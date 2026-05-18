@@ -153,9 +153,8 @@ static kern_return_t runThrustmasterBoot(IOUSBHostInterface *iface) {
                                &bytesTransferred,
                                /*completionTimeoutMs*/ 1000);
     if (ret != kIOReturnSuccess || bytesTransferred < 8) {
-        os_log(OS_LOG_DEFAULT,
-               "MacoswheelsDriver: boot model query failed 0x%x (%u bytes)",
-               ret, bytesTransferred);
+        Log("boot model query failed 0x%x (%u bytes)",
+            ret, bytesTransferred);
         OSSafeReleaseNULL(queryBuf);
         return ret != kIOReturnSuccess ? ret : kIOReturnError;
     }
@@ -178,14 +177,11 @@ static kern_return_t runThrustmasterBoot(IOUSBHostInterface *iface) {
     }
     uint16_t switchValue = TMBootSwitch::lookupSwitchValue(model, attachment);
     if (switchValue == 0) {
-        os_log(OS_LOG_DEFAULT,
-               "MacoswheelsDriver: no switch for model %u attachment %u",
-               model, attachment);
+        Log("no switch for model %u attachment %u", model, attachment);
         return kIOReturnUnsupported;
     }
-    os_log(OS_LOG_DEFAULT,
-           "MacoswheelsDriver: detected %s, mode-switch 0x%04x",
-           TMBootSwitch::lookupName(model, attachment), switchValue);
+    Log("detected %s, mode-switch 0x%04x",
+        TMBootSwitch::lookupName(model, attachment), switchValue);
 
     // Step 2: mode switch. No data stage.
     uint16_t outBytes = 0;
@@ -198,8 +194,7 @@ static kern_return_t runThrustmasterBoot(IOUSBHostInterface *iface) {
                                &outBytes,
                                /*completionTimeoutMs*/ 1000);
     if (ret != kIOReturnSuccess) {
-        os_log(OS_LOG_DEFAULT,
-               "MacoswheelsDriver: mode switch failed 0x%x", ret);
+        Log("mode switch failed 0x%x", ret);
     }
     return ret;
 }
@@ -208,22 +203,18 @@ static kern_return_t runLogitechBoot(IOUSBHostInterface *iface,
                                      uint16_t bcdDevice) {
     uint8_t mode = LGBootSwitch::lookupNativeMode(bcdDevice);
     if (mode == 0xFF) {
-        os_log(OS_LOG_DEFAULT,
-               "MacoswheelsDriver: Logitech-Boot bcdDevice 0x%04x not recognised; leaving wheel in compat",
-               bcdDevice);
+        Log("Logitech-Boot bcdDevice 0x%04x not recognised; leaving wheel in compat",
+            bcdDevice);
         return kIOReturnSuccess;
     }
-    os_log(OS_LOG_DEFAULT,
-           "MacoswheelsDriver: Logitech bcdDevice 0x%04x -> native mode %u",
-           bcdDevice, mode);
+    Log("Logitech bcdDevice 0x%04x -> native mode %u", bcdDevice, mode);
 
     IOUSBHostPipe *outPipe = NULL;
     kern_return_t ret = iface->CopyPipe(LGCommon::kInterruptOutEndpoint,
                                         &outPipe);
     if (ret != kIOReturnSuccess || !outPipe) {
-        os_log(OS_LOG_DEFAULT,
-               "MacoswheelsDriver: Logitech-Boot CopyPipe 0x%02x failed 0x%x",
-               LGCommon::kInterruptOutEndpoint, ret);
+        Log("Logitech-Boot CopyPipe 0x%02x failed 0x%x",
+            LGCommon::kInterruptOutEndpoint, ret);
         return ret;
     }
 
@@ -234,9 +225,7 @@ static kern_return_t runLogitechBoot(IOUSBHostInterface *iface,
     ret = sendBytes(outPipe, sw, sizeof(sw));
     OSSafeReleaseNULL(outPipe);
     if (ret != kIOReturnSuccess) {
-        os_log(OS_LOG_DEFAULT,
-               "MacoswheelsDriver: Logitech-Boot switch send failed 0x%x",
-               ret);
+        Log("Logitech-Boot switch send failed 0x%x", ret);
     }
     return ret;
 }
