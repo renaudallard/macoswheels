@@ -322,15 +322,17 @@ kern_return_t IMPL(MacoswheelsDriver, Start) {
         ivars->currentRange = ivars->protocol->maxRangeDegrees;
     }
 
-    IOUSBHostPipe *outPipe = NULL;
-    iface->CopyPipe(ivars->protocol->interruptOutEndpoint, &outPipe);
-    if (outPipe) {
-        ivars->outPipe = outPipe;
-        Log("interrupt-OUT pipe at 0x%02x acquired",
-            ivars->protocol->interruptOutEndpoint);
-    } else {
-        Log("failed to acquire interrupt-OUT pipe at 0x%02x",
-            ivars->protocol->interruptOutEndpoint);
+    if (ivars->protocol->interruptOutEndpoint != 0) {
+        IOUSBHostPipe *outPipe = NULL;
+        iface->CopyPipe(ivars->protocol->interruptOutEndpoint, &outPipe);
+        if (outPipe) {
+            ivars->outPipe = outPipe;
+            Log("interrupt-OUT pipe at 0x%02x acquired",
+                ivars->protocol->interruptOutEndpoint);
+        } else {
+            Log("failed to acquire interrupt-OUT pipe at 0x%02x",
+                ivars->protocol->interruptOutEndpoint);
+        }
     }
 
     IOUSBHostPipe *inPipe = NULL;
@@ -344,33 +346,49 @@ kern_return_t IMPL(MacoswheelsDriver, Start) {
             ivars->protocol->interruptInEndpoint);
     }
 
-    // Read the wheel's HID Report Descriptor over USB and splice in our PID
-    // output block. The merged bytes get attached as a property on this so
-    // HIDExport::newReportDescriptor returns them when the OS asks. If the
-    // wheel's descriptor doesn't come back or doesn't end with the expected
-    // 0xC0, HIDExport falls back to a generic joystick descriptor.
+    // Read the wheel's HID Report Descriptor over USB. If the device has FFB
+    // (protocol->encodeEffect set) we splice in our PID output block;
+    // otherwise (shifters etc.) we publish the descriptor unchanged. The
+    // bytes get attached as a property on this so HIDExport reads them in
+    // newReportDescriptor. If the descriptor doesn't come back or doesn't
+    // end with the expected 0xC0, HIDExport falls back to a generic
+    // joystick descriptor.
     {
         uint8_t wheelDesc[512];
         size_t  wheelLen = readWheelHIDDescriptor(iface,
                                                   wheelDesc, sizeof(wheelDesc));
         if (wheelLen > 0) {
             uint8_t merged[1024];
-            size_t  mergedLen = HIDDescriptor::spliceWithPID(
-                wheelDesc, wheelLen, merged, sizeof(merged));
+            size_t  mergedLen = 0;
+            if (ivars->protocol->encodeEffect != nullptr) {
+                mergedLen = HIDDescriptor::spliceWithPID(
+                    wheelDesc, wheelLen, merged, sizeof(merged));
+                if (mergedLen == 0) {
+                    Log("HID descriptor splice failed (wheelLen=%zu); "
+                        "using fallback", wheelLen);
+                }
+            } else {
+                if (wheelLen <= sizeof(merged)) {
+                    for (size_t i = 0; i < wheelLen; ++i) merged[i] = wheelDesc[i];
+                    mergedLen = wheelLen;
+                }
+            }
             if (mergedLen > 0) {
                 OSData       *data  = OSData::withBytes(merged, (uint32_t)mergedLen);
                 OSDictionary *props = OSDictionary::withCapacity(1);
                 if (data && props) {
                     props->setObject("MergedHIDDescriptor", data);
                     this->SetProperties(props);
-                    Log("merged HID descriptor: %zu wheel + %zu PID = %zu bytes",
-                        wheelLen, HIDDescriptor::kPIDBlockLen, mergedLen);
+                    if (ivars->protocol->encodeEffect != nullptr) {
+                        Log("merged HID descriptor: %zu wheel + %zu PID = %zu bytes",
+                            wheelLen, HIDDescriptor::kPIDBlockLen, mergedLen);
+                    } else {
+                        Log("publishing wheel HID descriptor as-is (%zu bytes; no FFB)",
+                            mergedLen);
+                    }
                 }
                 OSSafeReleaseNULL(data);
                 OSSafeReleaseNULL(props);
-            } else {
-                Log("HID descriptor splice failed (wheelLen=%zu); using fallback",
-                    wheelLen);
             }
         } else {
             Log("HID descriptor read failed; using fallback");

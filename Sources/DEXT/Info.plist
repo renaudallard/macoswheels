@@ -531,6 +531,52 @@
             <key>WheelMode</key>
             <string>firmware</string>
         </dict>
+        <key>TH8A</key>
+        <dict>
+            <key>CFBundleIdentifier</key>
+            <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+            <key>CFBundleIdentifierKernel</key>
+            <string>com.apple.kpi.iokit</string>
+            <key>IOClass</key>
+            <string>IOUserService</string>
+            <key>IOUserClass</key>
+            <string>MacoswheelsDriver</string>
+            <key>IOProviderClass</key>
+            <string>IOUSBHostInterface</string>
+            <key>idVendor</key>
+            <integer>1103</integer>
+            <key>idProduct</key>
+            <integer>46727</integer>
+            <key>IOMatchCategory</key>
+            <string>it.allard.macoswheels.TH8A</string>
+            <key>IOProbeScore</key>
+            <integer>10000</integer>
+            <key>WheelMode</key>
+            <string>firmware</string>
+        </dict>
+        <key>DFShifter</key>
+        <dict>
+            <key>CFBundleIdentifier</key>
+            <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+            <key>CFBundleIdentifierKernel</key>
+            <string>com.apple.kpi.iokit</string>
+            <key>IOClass</key>
+            <string>IOUserService</string>
+            <key>IOUserClass</key>
+            <string>MacoswheelsDriver</string>
+            <key>IOProviderClass</key>
+            <string>IOUSBHostInterface</string>
+            <key>idVendor</key>
+            <integer>1133</integer>
+            <key>idProduct</key>
+            <integer>49820</integer>
+            <key>IOMatchCategory</key>
+            <string>it.allard.macoswheels.DFShifter</string>
+            <key>IOProbeScore</key>
+            <integer>10000</integer>
+            <key>WheelMode</key>
+            <string>firmware</string>
+        </dict>
     </dict>
 </dict>
 </plist>
