@@ -90,7 +90,9 @@ jobs:
           prerelease: false
           generate_release_notes: true
           body: |
-            macoswheels build for ${{ github.event.inputs.tag || github.ref_name }}, built on `macos-latest` with the Xcode that runner ships with. The DEXT is ad-hoc signed; it loads on dev-mode + SIP-relaxed Macs (the project's stated posture) and is not for distribution.
+            macoswheels build for ${{ github.event.inputs.tag || github.ref_name }}, built on `macos-latest`.
+
+            **This artifact is unsigned.** Apple's tooling refuses to ad-hoc sign DriverKit DEXTs, and the project doesn't have an Apple Developer Program subscription, so CI cannot produce a signed DEXT. macOS won't load an unsigned DEXT even in dev mode; you'll need to re-sign locally with your own cert before it will work.
 
             ## Verify
 
@@ -99,8 +101,16 @@ jobs:
             ```
 
             ## Install (dev-mode Mac required)
-            1. Download `${{ steps.locate.outputs.name }}` (and the `.sha256` if you want to verify) and unzip.
-            2. Run `Tools/dev-load.sh` from the unzipped directory.
-            3. Approve the system extension in **System Settings > Privacy & Security**.
+
+            **Easiest path** — build from source with your own free Personal Team:
+            ```sh
+            git clone https://github.com/renaudallard/macoswheels.git
+            cd macoswheels && git checkout ${{ github.event.inputs.tag || github.ref_name }}
+            brew install xcodegen && xcodegen generate
+            open Macoswheels.xcodeproj   # set Signing & Capabilities -> your Personal Team
+            # Build & Run from Xcode, then approve in System Settings -> Privacy & Security
+            ```
+
+            **Or** unzip this artifact and re-sign the bundled `.app` with `codesign --force --deep --sign <your-identity>` before running `Tools/dev-load.sh`.
 
             See `docs/DEV-MODE-SETUP.md` for the one-time `csrutil` and `systemextensionsctl developer on` setup.
