@@ -100,6 +100,13 @@ struct WheelProtocol {
     // read loop is armed. Returns the byte count written, 0 if the wheel
     // doesn't need this kick. NULL means "no setup needed".
     size_t (*prepareInputStream)(uint8_t *out, size_t outCap);
+
+    // Optional multi-packet autocenter, used by wheels that need separate
+    // "set" and "activate" packets sent in a specific order (Logitech). The
+    // driver tries this first; if NULL, falls back to setAutocenterEnable
+    // followed by setAutocenterStrength. Same EffectPackets convention as
+    // encodeEffect.
+    bool (*setAutocenter)(uint8_t percent, EffectPackets *out);
 };
 
 // Find a registered wheel by USB VID/PID. Returns NULL if unsupported.

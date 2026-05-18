@@ -375,6 +375,24 @@ kern_return_t MacoswheelsDriver::SetAutocenter(uint8_t percent) {
     if (!ivars->protocol) return kIOReturnUnsupported;
     if (percent > 100) percent = 100;
     Log("SetAutocenter %u%%", percent);
+
+    if (ivars->protocol->setAutocenter) {
+        EffectPackets pkts = {};
+        if (!ivars->protocol->setAutocenter(percent, &pkts)) {
+            return kIOReturnUnsupported;
+        }
+        size_t offset = 0;
+        for (uint8_t i = 0; i < pkts.count; ++i) {
+            uint8_t len = pkts.lengths[i];
+            kern_return_t r = sendBytes(ivars->outPipe,
+                                        pkts.bytes + offset, len);
+            if (r != kIOReturnSuccess) return r;
+            offset += len;
+        }
+        ivars->currentAutocenter = percent;
+        return kIOReturnSuccess;
+    }
+
     uint8_t enablePkt[16], strengthPkt[16];
     kern_return_t ret = kIOReturnSuccess;
     if (ivars->protocol->setAutocenterEnable) {
