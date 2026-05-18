@@ -34,7 +34,7 @@ Thrustmaster ships no macOS driver. Apple removed kext-based force feedback year
 Games that use `IOHIDManager` — that's CrossOver/Wine plus any well-behaved native title — see a standard force-feedback joystick with zero per-app glue.
 
 > [!IMPORTANT]
-> **Status:** the IIG / C++ DEXT covers every device in the tables below — T-series (T150, T300, TX, TS-XW, TS-PC, T248, T-GT) with full FFB, Logitech (DFP, DFGT, G25, G27, G29, G920, G923 PC/PS/Xbox) with constant + condition FFB, plus the TH8A and Driving Force shifters. T128 enumerates and forwards its axes/buttons but FFB is unimplemented (wire protocol not publicly documented). Logitech wheels in "Driving Force compat" mode are auto-switched to native firmware mode at boot via the wheel's `bcdDevice` (table cribbed from Linux `new-lg4ff`). Input is dynamic: the driver reads each wheel's HID Report Descriptor over USB and re-publishes it with the PID 1.0 output-report block spliced in, so steering / pedals / buttons / hat pass through unchanged. CI builds the DEXT on `macos-latest` and runs 125 Linux unit tests on every push. The DEXT is IIG / C++ rather than Swift because Apple still ships no Swift standard library for DriverKit on any installed Xcode; see [`docs/DEV-MODE-SETUP.md`](docs/DEV-MODE-SETUP.md).
+> **Status:** the IIG / C++ DEXT covers every device in the tables below. T300, TX, TS-XW, TS-PC, T248 and T-GT have a full FFB encoder; T150 covers constant + periodics + spring + damper; the Logitech family (DFP, DFGT, G25, G27, G29, G920, G923 PC/PS/Xbox) covers constant + condition; the TH8A and Driving Force shifters work as input-only HID devices. T128 enumerates and forwards its axes / buttons / hat but FFB is unimplemented (wire protocol not publicly documented). Logitech wheels in "Driving Force compat" mode are auto-switched to native firmware mode at boot via the wheel's `bcdDevice` (table cribbed from Linux `new-lg4ff`). Input is dynamic: the driver reads each wheel's HID Report Descriptor over USB and re-publishes it with the PID 1.0 output-report block spliced in, so axes and buttons pass through unchanged. CI builds the DEXT on `macos-latest` and runs 125 Linux unit tests on every push. The DEXT is IIG / C++ rather than Swift because Apple still ships no Swift standard library for DriverKit on any installed Xcode; see [`docs/DEV-MODE-SETUP.md`](docs/DEV-MODE-SETUP.md).
 
 ---
 
@@ -44,34 +44,34 @@ Games that use `IOHIDManager` — that's CrossOver/Wine plus any well-behaved na
 
 All T-series wheels share boot PID `044F:B65D` ("Thrustmaster FFB Wheel") and are switched into their model-specific firmware PID by a vendor control transfer.
 
-| Model           | Firmware PID  | FFB encoder | Notes                                     |
-|-----------------|---------------|-------------|-------------------------------------------|
-| **T150**        | `B677`        | **full**    | reference implementation                  |
+| Model           | Firmware PID  | FFB encoder         | Notes                                     |
+|-----------------|---------------|---------------------|-------------------------------------------|
+| **T150**        | `B677`        | constant + periodic + condition | reference implementation; no ramp / friction / inertia |
 | T300 RS (PS3 normal / advanced / PS4) | `B66E` / `B66F` / `B66D` | full | three USB modes, one driver |
-| TX              | `B669`        | full        |                                           |
-| TS-XW           | `B692`        | full        |                                           |
-| TS-PC Racer     | `B689`        | full        |                                           |
-| T248            | `B696`        | full        | no hardware inertia                       |
-| T-GT            | `B68E`        | full        |                                           |
-| T128            | `B68F`        | stub        | distinct protocol; needs hardware capture |
-| TH8A shifter    | `B687`        | n/a         | buttons only                              |
+| TX              | `B669`        | full                |                                           |
+| TS-XW           | `B692`        | full                |                                           |
+| TS-PC Racer     | `B689`        | full                |                                           |
+| T248            | `B696`        | full                | wheel hardware lacks inertia              |
+| T-GT            | `B68E`        | full                |                                           |
+| T128            | `B68F`        | none (input only)   | wire protocol not publicly documented     |
+| TH8A shifter    | `B687`        | n/a                 | buttons only                              |
 
 ### Logitech G-series
 
 DFP / G25 / DFGT / G27 / G29 reach this driver via the shared "Driving Force" compat PID `046D:C294`. G920 and G923 enumerate directly.
 
-| Model                  | PID                       | FFB encoder | Notes                                |
-|------------------------|---------------------------|-------------|--------------------------------------|
-| Driving Force Pro      | `C298`                    | constant + condition |                              |
-| G25                    | `C299`                    | constant + condition | hardware friction support    |
-| Driving Force GT       | `C29A`                    | settings only        |                              |
-| G27                    | `C29B`                    | constant + condition | hardware friction support    |
-| **G29**                | `C24F`                    | constant + condition |                              |
-| **G920**               | `C262`                    | constant + condition |                              |
-| **G923** (PC/PS/Xbox)  | `C266` / `C267` / `C26E`  | constant + condition |                              |
-| Driving Force shifter  | `C29C`                    | n/a                  | buttons only                 |
+| Model                  | PID                       | FFB encoder          | Notes        |
+|------------------------|---------------------------|----------------------|--------------|
+| Driving Force Pro      | `C298`                    | constant + condition |              |
+| G25                    | `C299`                    | constant + condition |              |
+| Driving Force GT       | `C29A`                    | constant + condition |              |
+| G27                    | `C29B`                    | constant + condition |              |
+| **G29**                | `C24F`                    | constant + condition |              |
+| **G920**               | `C262`                    | constant + condition |              |
+| **G923** (PC/PS/Xbox)  | `C266` / `C267` / `C26E`  | constant + condition |              |
+| Driving Force shifter  | `C29C`                    | n/a                  | buttons only |
 
-`full` = constant, ramp, every periodic waveform, spring, damper, friction, inertia. `constant + condition` = constant, spring, damper, friction (Logitech periodic + ramp need a continuous-update loop that's still TODO). `settings only` = rotation range + autocenter + gain, no FFB encoder yet. `stub` = wheel is recognised, settings throw `notImplemented` pending a USB capture.
+`full` = constant, ramp, every periodic waveform, spring, damper, friction, inertia. `constant + periodic + condition` = constant, the five periodics, spring and damper (T150's encoder lacks ramp / friction / inertia). `constant + condition` = constant, spring, damper, friction (Logitech periodics and ramp would need a continuous-update loop that's still TODO). `none (input only)` = the wheel matches, its axes / buttons / hat are forwarded, but no FFB is sent. `n/a` = device has no FFB hardware.
 
 ---
 
