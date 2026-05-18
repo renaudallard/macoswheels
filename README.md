@@ -34,7 +34,7 @@ Thrustmaster ships no macOS driver. Apple removed kext-based force feedback year
 Games that use `IOHIDManager` — that's CrossOver/Wine plus any well-behaved native title — see a standard force-feedback joystick with zero per-app glue.
 
 > [!IMPORTANT]
-> **Status:** the Swift protocol library is complete for 21 wheels and shifters and is tested on Linux on every push (125 unit tests covering encoders, settings packets and the PID parser). The DriverKit DEXT is being rewritten in IIG / C++ because Apple still ships no Swift standard library for DriverKit on any installed Xcode. **T150 is currently the only model wired into the IIG DEXT**; the rest of T-series and the Logitech family are being ported module by module. The device tables below describe the Swift library's encoder coverage, not what the IIG DEXT exposes to macOS today. See [`docs/DEV-MODE-SETUP.md`](docs/DEV-MODE-SETUP.md) for the rationale and setup.
+> **Status:** the Swift protocol library is complete for 21 wheels and shifters and is tested on Linux on every push (125 unit tests covering encoders, settings packets and the PID parser). The DriverKit DEXT is being rewritten in IIG / C++ because Apple still ships no Swift standard library for DriverKit on any installed Xcode. **T150 plus the T300 family (T300/TX/TS-XW/TS-PC/T248/T-GT) are wired into the IIG DEXT today**; T128 and the Logitech family are still being ported module by module. The device tables below describe the Swift library's encoder coverage, not what the IIG DEXT exposes to macOS today. See [`docs/DEV-MODE-SETUP.md`](docs/DEV-MODE-SETUP.md) for the rationale and setup.
 
 ---
 

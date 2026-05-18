@@ -102,5 +102,13 @@ const WheelProtocol *findWheelProtocol(uint16_t vendorID, uint16_t productID);
 // Concrete protocol instances. New wheels add an extern here and register
 // themselves in WheelProtocol.cpp.
 extern const WheelProtocol kT150Protocol;
+extern const WheelProtocol kT300PS3NormalProtocol;
+extern const WheelProtocol kT300PS3AdvancedProtocol;
+extern const WheelProtocol kT300PS4NormalProtocol;
+extern const WheelProtocol kTXProtocol;
+extern const WheelProtocol kTSXWProtocol;
+extern const WheelProtocol kTSPCProtocol;
+extern const WheelProtocol kT248Protocol;
+extern const WheelProtocol kTGTProtocol;
 
 #endif /* WheelProtocol_hpp */
