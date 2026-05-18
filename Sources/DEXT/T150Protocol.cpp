@@ -2,10 +2,59 @@
 #include "TMSettings.hpp"
 #include "TMFFBEncoder.hpp"
 
-// T150 input-report translation is not yet implemented; the wheel's
-// interrupt-IN packet layout needs a usbmon capture from real hardware to
-// land. NULL pointer in the protocol vtable means "no parser; don't bother
-// dispatching".
+// T150 firmware-mode HID descriptor (PID 0xB677), report ID 0x07, 15-byte
+// state report. Layout extracted from the upstream Linux t150_driver capture
+// (tmp/t150_driver/traffic/old_caps/hid_report_fw35):
+//
+//   byte 0       = 0x07 (report ID)
+//   bytes 1..2   = X steering, 16-bit unsigned LE, centred at 0x8000
+//   bytes 3..4   = Y throttle, 10-bit valid in low bits
+//   bytes 5..6   = Rz brake,  10-bit valid in low bits
+//   bytes 7..8   = Slider clutch, 10-bit valid in low bits
+//   bytes 9..10  = 16-bit constant padding
+//   byte 11      = buttons 1..8
+//   byte 12 low5 = buttons 9..13
+//   byte 12 high3+ byte 13 = padding
+//   byte 14 low4 = hat (0..7, 8 = no hat)
+//   byte 14 high4= padding
+//
+// The "open" packet [0x42, 0x04] sent once on interrupt-OUT tells the wheel
+// to start streaming these reports (Linux t150_driver/hid-t150.c §
+// packet_input_open).
+
+static size_t prepareT150InputStream(uint8_t *out, size_t outCap) {
+    if (outCap < 2) return 0;
+    out[0] = 0x42;
+    out[1] = 0x04;
+    return 2;
+}
+
+static size_t translateT150InputReport(const uint8_t *raw, size_t rawLen,
+                                       uint8_t *out, size_t outCap) {
+    if (!raw || rawLen < 15 || raw[0] != 0x07) return 0;
+    if (outCap < 9) return 0;
+
+    uint16_t wheelX  = (uint16_t)raw[1] | ((uint16_t)raw[2] << 8);
+    int16_t  signedX = (int16_t)((int32_t)wheelX - 32768);
+    uint16_t throttle = (uint16_t)raw[3] | ((uint16_t)raw[4] << 8);
+    uint16_t brake    = (uint16_t)raw[5] | ((uint16_t)raw[6] << 8);
+    // Slider (clutch) at bytes 7..8 is dropped: the re-export descriptor has
+    // only X/Y/Rz axes plus 16 buttons.
+
+    uint16_t buttons = (uint16_t)raw[11]
+                     | (((uint16_t)raw[12] & 0x1F) << 8);
+
+    out[0] = 0x01;
+    out[1] = (uint8_t)(signedX & 0xFF);
+    out[2] = (uint8_t)(((uint16_t)signedX >> 8) & 0xFF);
+    out[3] = (uint8_t)(throttle & 0xFF);
+    out[4] = (uint8_t)((throttle >> 8) & 0xFF);
+    out[5] = (uint8_t)(brake & 0xFF);
+    out[6] = (uint8_t)((brake >> 8) & 0xFF);
+    out[7] = (uint8_t)(buttons & 0xFF);
+    out[8] = (uint8_t)((buttons >> 8) & 0xFF);
+    return 9;
+}
 
 static int8_t clampLevel(int16_t v) {
     int x = (int)v / 256;
@@ -142,6 +191,7 @@ const WheelProtocol kT150Protocol = {
     .setAutocenterStrength  = &TMSettings::setAutocenterStrengthPacket,
     .setGain                = &TMSettings::setGainPacket,
 
-    .translateInputReport   = nullptr,
+    .translateInputReport   = &translateT150InputReport,
     .encodeEffect           = &encodeT150Effect,
+    .prepareInputStream     = &prepareT150InputStream,
 };

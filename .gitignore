@@ -25,3 +25,6 @@ artifacts/
 # Captured USB traces (size; users opt in)
 *.pcap
 *.pcapng
+
+# Project-local scratch: cloned upstream drivers, captures, references.
+/tmp/

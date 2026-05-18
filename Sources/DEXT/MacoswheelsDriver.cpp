@@ -276,6 +276,17 @@ kern_return_t IMPL(MacoswheelsDriver, Start) {
         }
     }
 
+    if (ivars->outPipe && ivars->protocol && ivars->protocol->prepareInputStream) {
+        uint8_t kick[8];
+        size_t  n = ivars->protocol->prepareInputStream(kick, sizeof(kick));
+        if (n > 0) {
+            kern_return_t kr = sendBytes(ivars->outPipe, kick, n);
+            if (kr != kIOReturnSuccess) {
+                Log("prepareInputStream sendBytes failed 0x%x", kr);
+            }
+        }
+    }
+
     RegisterService();
     return kIOReturnSuccess;
 }

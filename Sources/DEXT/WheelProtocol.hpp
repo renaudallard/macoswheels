@@ -94,6 +94,12 @@ struct WheelProtocol {
     // out->bytes. Returns true on success; false if the wheel doesn't
     // support this effect kind (driver should silently drop).
     bool (*encodeEffect)(const NormalizedEffect *effect, EffectPackets *out);
+
+    // Optional one-shot interrupt-OUT packet that tells the wheel to start
+    // streaming input reports. The driver sends it once after the AsyncIO
+    // read loop is armed. Returns the byte count written, 0 if the wheel
+    // doesn't need this kick. NULL means "no setup needed".
+    size_t (*prepareInputStream)(uint8_t *out, size_t outCap);
 };
 
 // Find a registered wheel by USB VID/PID. Returns NULL if unsupported.
