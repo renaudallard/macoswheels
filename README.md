@@ -150,81 +150,107 @@ GitHub Actions (`.github/workflows/build.yml`) runs the Linux job on every push 
 
 ## Signing the DEXT
 
-macOS won't load a DriverKit DEXT that isn't code-signed, even with `systemextensionsctl developer on` and SIP relaxed. Apple's tooling also refuses ad-hoc (`codesign --sign -`) signing for DriverKit, so the release artifact ships unsigned and has to be re-signed somewhere before it will load.
+macOS won't load the driver until it's signed. The download from the Releases page is unsigned, so you sign it once on your own Mac. **This is free, takes about 5 minutes, and you don't need to pay Apple anything.**
 
-Two cert sources work; pick whichever fits your situation.
+### What you need
 
-### Option A — Free Personal Team (Mac required, no money)
+- A Mac running macOS 26 or later.
+- **Xcode** (free from the Mac App Store).
+- An **Apple ID** — the same one you use for iCloud / the App Store is fine. Create one at [appleid.apple.com](https://appleid.apple.com) if you don't have one.
 
-Best for personal use on one specific Mac. The cert never leaves that Mac, the DEXT only loads on that Mac.
+### Step 1 — Get the source
 
-1. Sign into [appleid.apple.com](https://appleid.apple.com) with any Apple ID (no Developer Program subscription required).
-2. On the target Mac, open Xcode → **Settings** → **Accounts**, click **+**, choose **Apple ID**, sign in. Xcode now shows your name with a "Personal Team" team underneath.
-3. Clone macoswheels, generate the project, open it:
+Open the **Terminal** app and paste:
+
+```sh
+git clone https://github.com/renaudallard/macoswheels.git
+cd macoswheels
+git checkout v0.1.0
+```
+
+If you don't have Homebrew (the `brew` command), install it from [brew.sh](https://brew.sh) first. Then:
+
+```sh
+brew install xcodegen
+xcodegen generate
+open Macoswheels.xcodeproj
+```
+
+Xcode opens with the project loaded.
+
+### Step 2 — Sign in to Xcode
+
+In the menu bar: **Xcode → Settings → Accounts**. Click the **+** at the bottom left, pick **Apple ID**, type your Apple ID and password. You should see your name with **(Personal Team)** under it. Close the Settings window.
+
+### Step 3 — Pick a name only you would use
+
+You'll type this twice in the next steps. Make it lowercase, no spaces. A good pattern is your name plus the date, e.g. `johnsmith2026`. Just write it down somewhere.
+
+### Step 4 — Set the team for the DEXT
+
+In Xcode's left sidebar click the **blue project icon** at the very top (it says "Macoswheels"). A list of targets appears in the middle. Click **MacoswheelsDEXT** under TARGETS.
+
+A row of tabs appears at the top of the middle panel. Click **Signing & Capabilities**.
+
+- Tick the **Automatically manage signing** checkbox.
+- In the **Team** dropdown, pick the entry with your name and **(Personal Team)**.
+- In the **Bundle Identifier** field, replace `it.allard.macoswheels.dext` with `com.YOURNAME.macoswheels.dext` — using the name you wrote down in Step 3.
+
+If Xcode shows a red error like "Failed to register bundle identifier", that name is taken. Add more letters until it's accepted.
+
+### Step 5 — Set the team for the container app
+
+Same panel, but in the TARGETS list click **MacoswheelsContainer** instead. **Signing & Capabilities** → tick **Automatically manage signing** → pick your team. Set the **Bundle Identifier** to `com.YOURNAME.macoswheels` (same as Step 4 but without the `.dext` at the end).
+
+### Step 6 — Build & run
+
+Press **⌘ R** (Cmd + R) or click the ▶ play button at the top-left of Xcode. Xcode signs everything and launches the container app.
+
+### Step 7 — Approve the system extension
+
+A small window opens with an **Activate DEXT** button. Click it. macOS pops a dialog telling you to open System Settings.
+
+Open **System Settings → Privacy & Security**, scroll to the bottom. There will be a line saying "System software from macoswheels was blocked" with an **Allow** button. Click **Allow**, type your Mac password.
+
+### Step 8 — Plug your wheel in
+
+That's it. Plug the wheel into USB. It should now show up as a force-feedback joystick in any game and in CrossOver / Wine.
+
+### Things that may go wrong
+
+- **"No certificate found" in Step 4 or 5** — you skipped Step 2. Go back and sign in to Xcode.
+- **System Settings doesn't show "Allow"** — you haven't enabled developer mode yet. In Terminal, run `sudo systemextensionsctl developer on` and try again. The full SIP / dev-mode setup is in [`docs/DEV-MODE-SETUP.md`](docs/DEV-MODE-SETUP.md).
+- **It worked, then a week later it doesn't** — free Personal Team certs expire after 7 days. Open the project in Xcode and press **⌘ R** again. The DEXT re-signs and reloads.
+- **The DEXT loads but the wheel doesn't react** — start a debug log with `log stream --predicate 'sender == "MacoswheelsDEXT"'` in Terminal and watch what it says when you plug the wheel in.
+
+---
+
+### Optional: paying Apple to sign once for everyone
+
+The free Personal Team route above ties the build to your Mac. If you want the same signed zip to install on multiple Macs (a friend's, a friend's friend's), you need an **Apple Developer Program** subscription — $99/year USD from [developer.apple.com/programs/enroll/](https://developer.apple.com/programs/enroll/). Individuals get approved in 24–48 h.
+
+After enrolment:
+
+1. **Find your Team ID** at [developer.apple.com/account](https://developer.apple.com/account) → **Membership** tab. It's a 10-character string like `A1B2C3D4E5`.
+2. **Create a Developer ID Application certificate**:
+   - Go to [Certificates list](https://developer.apple.com/account/resources/certificates/list) → click **+** → choose **Developer ID Application**.
+   - Apple asks for a CSR (Certificate Signing Request) file. To make one: open **Keychain Access** on your Mac → menu bar **Keychain Access → Certificate Assistant → Request a Certificate From a Certificate Authority…** Fill your email, name, choose **Saved to disk**, click **Continue**.
+   - Upload that `.certSigningRequest` file to Apple's page. Download the resulting `.cer` and double-click it — it goes into your Keychain.
+3. **Export the cert** so CI can use it. In **Keychain Access**, find "Developer ID Application: <Your Name>", right-click → **Export…**, save as `.p12`, pick a strong password (you'll need it in a second).
+4. **Add three GitHub secrets** so the `release.yml` workflow can sign for you. You'll need the [GitHub CLI](https://cli.github.com/) (`brew install gh && gh auth login`). Then:
    ```sh
-   git clone https://github.com/renaudallard/macoswheels.git
-   cd macoswheels && git checkout v0.1.0   # or main
-   brew install xcodegen && xcodegen generate
-   open Macoswheels.xcodeproj
+   gh secret set CERT_P12_BASE64 < <(base64 < your-cert.p12)
+   gh secret set CERT_P12_PWD              # paste cert export password when prompted
+   gh secret set DEVELOPMENT_TEAM          # paste your 10-character Team ID
    ```
-4. In Xcode, select the **MacoswheelsDEXT** target → **Signing & Capabilities**:
-   - Check **Automatically manage signing**.
-   - **Team**: select `<your name> (Personal Team)`.
-   - **Bundle Identifier**: change `it.allard.macoswheels.dext` to something unique under your reverse-DNS, e.g. `com.yourname.macoswheels.dext` (Apple disambiguates by bundle ID; the original is already registered to the project's team).
-5. Repeat step 4 for the **MacoswheelsContainer** target (rename the bundle ID to match, e.g. `com.yourname.macoswheels`).
-6. Build & run from Xcode (**Cmd+R**). Xcode auto-generates an *Apple Development* cert in your Keychain and re-signs the DEXT + container with your Personal Team.
-7. The container app opens; click **Activate DEXT** and approve in **System Settings → Privacy & Security**. The DEXT now loads on this Mac.
+   Check with `gh secret list` — the three names should show up (values are never displayed).
+5. **Run the release workflow**:
+   ```sh
+   gh workflow run release.yml -f tag=v0.1.0
+   ```
+   The signed zip appears on the [Releases page](https://github.com/renaudallard/macoswheels/releases) when the workflow finishes (5–10 minutes).
 
-Caveats:
-- Personal Team certs only authorise the Mac that signed them. The same `.app` won't load on a different Mac without re-signing there.
-- Personal Team certs **cannot** request gated entitlements like `com.apple.developer.driverkit.transport.usb`. The DEXT requests those, but on `systemextensionsctl developer on` + SIP-relaxed Macs the kernel ignores the gating and loads it anyway, which is the posture this project assumes.
-- The cert expires after 7 days; rebuild from Xcode to refresh it.
-
-### Option B — Apple Developer Program ($99/year, CI-signable)
-
-Best if you want the same artifact to install on multiple Macs, or you want CI to produce a signed zip.
-
-1. **Enrol** in the Apple Developer Program at [developer.apple.com/programs/enroll/](https://developer.apple.com/programs/enroll/). Individuals get approved in 24–48 h; organisations need a D-U-N-S number and take longer.
-2. **Find your Team ID** at [developer.apple.com/account](https://developer.apple.com/account) under **Membership** → it's a 10-character alphanumeric string. This is the `DEVELOPMENT_TEAM` value.
-3. **Create a Developer ID Application certificate**:
-   - [developer.apple.com/account/resources/certificates](https://developer.apple.com/account/resources/certificates/list) → **+** → **Developer ID Application** → upload the CSR file Keychain Access generates for you (Keychain Access → Certificate Assistant → Request a Certificate From a Certificate Authority).
-   - Download the resulting `.cer`, double-click to install in Keychain Access.
-4. **Export as `.p12`**: in Keychain Access, find your Developer ID Application certificate, right-click → **Export…**, choose `.p12` format, set a strong export password.
-5. **(Optional) Request the DriverKit entitlement grant** at [developer.apple.com/contact/request/driverkit](https://developer.apple.com/contact/request/driverkit) if you want the DEXT to load on default-SIP Macs. Apple reviews case-by-case and may decline. Without this grant the build still works but only loads on dev-mode + SIP-relaxed Macs — same posture as Option A.
-
-#### Wire the cert into CI
-
-With the `.p12` and password in hand, set three repository secrets so `release.yml` can pick them up. Run on a machine where you have the `.p12` file:
-
-```sh
-gh secret set CERT_P12_BASE64 < <(base64 < path/to/cert.p12)
-gh secret set CERT_P12_PWD            # paste cert export password when prompted
-gh secret set DEVELOPMENT_TEAM        # paste your 10-character Team ID
-```
-
-Verify with `gh secret list` — it should print all three names (values are never displayed). Then re-trigger the release:
-
-```sh
-gh workflow run release.yml -f tag=v0.1.0
-```
-
-`release.yml` imports the cert into an ephemeral keychain on the runner, signs the DEXT + container, and publishes the signed zip to the Release.
-
-#### Sign locally with the same cert
-
-If you'd rather build locally without CI:
-
-```sh
-xcodebuild -project Macoswheels.xcodeproj \
-           -scheme MacoswheelsContainer \
-           -configuration Release \
-           CODE_SIGN_STYLE=Manual \
-           CODE_SIGN_IDENTITY="Developer ID Application: <Your Name> (<TEAMID>)" \
-           DEVELOPMENT_TEAM=<TEAMID> \
-           archive
-```
-
-The bundle IDs in `project.yml` can stay as-is (`it.allard.macoswheels`) if you own them, or you can fork and change them.
+Even with this paid path, end users still need `systemextensionsctl developer on` + relaxed SIP, because the DEXT also requests Apple-gated entitlements that need a separate (free) [DriverKit entitlement request](https://developer.apple.com/contact/request/driverkit) — Apple grants those case-by-case and may decline.
 
 ---
 
