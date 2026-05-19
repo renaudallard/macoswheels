@@ -144,9 +144,87 @@ xcodebuild -project Macoswheels.xcodeproj \
            build
 ```
 
-The DEXT target requires either an Apple-issued DriverKit entitlement (not pursued) or a free Personal Team certificate that Xcode auto-generates for you. See [`docs/DEV-MODE-SETUP.md`](docs/DEV-MODE-SETUP.md) for the loading flow.
+GitHub Actions (`.github/workflows/build.yml`) runs the Linux job on every push and the macOS job on `macos-latest` — falling back to a compile-only build when signing secrets aren't configured. `release.yml` is identical but triggered by `v*` tags and attaches the (un)signed zip to a GitHub Release.
 
-GitHub Actions (`.github/workflows/build.yml`) runs the Linux job on every push and the macOS job on `macos-latest` — falling back to a compile-only build when signing secrets aren't configured. `release.yml` is identical but triggered by `v*` tags and attaches the signed zip to a GitHub Release.
+---
+
+## Signing the DEXT
+
+macOS won't load a DriverKit DEXT that isn't code-signed, even with `systemextensionsctl developer on` and SIP relaxed. Apple's tooling also refuses ad-hoc (`codesign --sign -`) signing for DriverKit, so the release artifact ships unsigned and has to be re-signed somewhere before it will load.
+
+Two cert sources work; pick whichever fits your situation.
+
+### Option A — Free Personal Team (Mac required, no money)
+
+Best for personal use on one specific Mac. The cert never leaves that Mac, the DEXT only loads on that Mac.
+
+1. Sign into [appleid.apple.com](https://appleid.apple.com) with any Apple ID (no Developer Program subscription required).
+2. On the target Mac, open Xcode → **Settings** → **Accounts**, click **+**, choose **Apple ID**, sign in. Xcode now shows your name with a "Personal Team" team underneath.
+3. Clone macoswheels, generate the project, open it:
+   ```sh
+   git clone https://github.com/renaudallard/macoswheels.git
+   cd macoswheels && git checkout v0.1.0   # or main
+   brew install xcodegen && xcodegen generate
+   open Macoswheels.xcodeproj
+   ```
+4. In Xcode, select the **MacoswheelsDEXT** target → **Signing & Capabilities**:
+   - Check **Automatically manage signing**.
+   - **Team**: select `<your name> (Personal Team)`.
+   - **Bundle Identifier**: change `it.allard.macoswheels.dext` to something unique under your reverse-DNS, e.g. `com.yourname.macoswheels.dext` (Apple disambiguates by bundle ID; the original is already registered to the project's team).
+5. Repeat step 4 for the **MacoswheelsContainer** target (rename the bundle ID to match, e.g. `com.yourname.macoswheels`).
+6. Build & run from Xcode (**Cmd+R**). Xcode auto-generates an *Apple Development* cert in your Keychain and re-signs the DEXT + container with your Personal Team.
+7. The container app opens; click **Activate DEXT** and approve in **System Settings → Privacy & Security**. The DEXT now loads on this Mac.
+
+Caveats:
+- Personal Team certs only authorise the Mac that signed them. The same `.app` won't load on a different Mac without re-signing there.
+- Personal Team certs **cannot** request gated entitlements like `com.apple.developer.driverkit.transport.usb`. The DEXT requests those, but on `systemextensionsctl developer on` + SIP-relaxed Macs the kernel ignores the gating and loads it anyway, which is the posture this project assumes.
+- The cert expires after 7 days; rebuild from Xcode to refresh it.
+
+### Option B — Apple Developer Program ($99/year, CI-signable)
+
+Best if you want the same artifact to install on multiple Macs, or you want CI to produce a signed zip.
+
+1. **Enrol** in the Apple Developer Program at [developer.apple.com/programs/enroll/](https://developer.apple.com/programs/enroll/). Individuals get approved in 24–48 h; organisations need a D-U-N-S number and take longer.
+2. **Find your Team ID** at [developer.apple.com/account](https://developer.apple.com/account) under **Membership** → it's a 10-character alphanumeric string. This is the `DEVELOPMENT_TEAM` value.
+3. **Create a Developer ID Application certificate**:
+   - [developer.apple.com/account/resources/certificates](https://developer.apple.com/account/resources/certificates/list) → **+** → **Developer ID Application** → upload the CSR file Keychain Access generates for you (Keychain Access → Certificate Assistant → Request a Certificate From a Certificate Authority).
+   - Download the resulting `.cer`, double-click to install in Keychain Access.
+4. **Export as `.p12`**: in Keychain Access, find your Developer ID Application certificate, right-click → **Export…**, choose `.p12` format, set a strong export password.
+5. **(Optional) Request the DriverKit entitlement grant** at [developer.apple.com/contact/request/driverkit](https://developer.apple.com/contact/request/driverkit) if you want the DEXT to load on default-SIP Macs. Apple reviews case-by-case and may decline. Without this grant the build still works but only loads on dev-mode + SIP-relaxed Macs — same posture as Option A.
+
+#### Wire the cert into CI
+
+With the `.p12` and password in hand, set three repository secrets so `release.yml` can pick them up. Run on a machine where you have the `.p12` file:
+
+```sh
+gh secret set CERT_P12_BASE64 < <(base64 < path/to/cert.p12)
+gh secret set CERT_P12_PWD            # paste cert export password when prompted
+gh secret set DEVELOPMENT_TEAM        # paste your 10-character Team ID
+```
+
+Verify with `gh secret list` — it should print all three names (values are never displayed). Then re-trigger the release:
+
+```sh
+gh workflow run release.yml -f tag=v0.1.0
+```
+
+`release.yml` imports the cert into an ephemeral keychain on the runner, signs the DEXT + container, and publishes the signed zip to the Release.
+
+#### Sign locally with the same cert
+
+If you'd rather build locally without CI:
+
+```sh
+xcodebuild -project Macoswheels.xcodeproj \
+           -scheme MacoswheelsContainer \
+           -configuration Release \
+           CODE_SIGN_STYLE=Manual \
+           CODE_SIGN_IDENTITY="Developer ID Application: <Your Name> (<TEAMID>)" \
+           DEVELOPMENT_TEAM=<TEAMID> \
+           archive
+```
+
+The bundle IDs in `project.yml` can stay as-is (`it.allard.macoswheels`) if you own them, or you can fork and change them.
 
 ---
 
